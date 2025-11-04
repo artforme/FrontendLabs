@@ -1,4 +1,4 @@
-import"./navigation-menu-Bzy58E3s.js";const o="https://ceramic-api.onrender.com";function n(t){return`
+import"./navigation-menu-CuVN_rmb.js";const o="https://ceramic-api.onrender.com";function n(t){return`
     <div class="products__card"> <img src="${o}${t.image}" alt="${t.title}" class="products__image" loading="lazy">
       <div class="products__card-description">      
         <h3 class="products__title">${t.title}</h3>
