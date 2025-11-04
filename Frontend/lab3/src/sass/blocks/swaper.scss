@@ -1,0 +1,97 @@
+@use "@/sass/base/variables.scss" as *;
+
+.works {
+  background-color: $light;
+
+  width: 100%;
+  max-width: 1920px;
+
+  padding-top: 100px;
+  padding-bottom: 50px;
+
+  &__container {
+    max-width: 1355px;
+    height: 423px;
+
+    margin: 0 auto;
+  }
+
+  &__title {
+    font-size: 36px;
+    font-weight: 500;
+    color: $dark;
+    text-align: center;
+  }
+
+  &__slider {
+    position: relative;
+
+    margin-top: 40px;
+  }
+
+  &__item {
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .swiper {
+    padding: 35px 25px 0 25px;
+  }
+
+  .swiper-button-prev,
+  .swiper-button-next {
+    color: $dark;
+    width: 12px;
+    height: 20px;
+
+    top: 50%;
+    transform: translateY(-40%);
+  }
+
+  .swiper-pagination {
+    position: relative;
+    margin-top: 20px;
+
+    .swiper-pagination-bullet {
+      background: $dark;
+      opacity: 0.5;
+
+      &-active {
+        background: $ceramic;
+        opacity: 1;
+      }
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .works {
+    &__slider {
+      max-width: 1104px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .works {
+    &__slider {
+      max-width: 400px;
+    }
+  }
+
+  .swiper-button-next,
+  .swiper-button-prev {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .works {
+    &__slider {
+      max-width: 342px;
+    }
+  }
+}

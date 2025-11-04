@@ -1,0 +1,58 @@
+@use "@/sass/base/variables.scss" as *;
+
+.header {
+  &__logo {
+    margin-left: 890px;
+  }
+}
+
+.navigation {
+  max-width: 1920px;
+
+  &__list {
+    margin-left: 800px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .header {
+    &__logo {
+      margin-left: 550px;
+    }
+  }
+
+  .navigation {
+    max-width: 1200px;
+
+    &__list {
+      margin-left: 467px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    &__logo {
+      margin-left: 340px;
+    }
+  }
+
+  .navigation {
+    max-width: 768px;
+
+    &__list {
+      margin: 0 auto;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    padding-left: 10px;
+    padding-right: 10px;
+
+    &__logo {
+      margin-left: 0;
+    }
+  }
+}

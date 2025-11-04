@@ -1,0 +1,17 @@
+.loading {
+  margin: 0 auto;
+
+  font-size: 40px;
+
+  display: flex;
+  flex-flow: column nowrap;
+
+  align-items: center;
+
+  gap: 30px;
+
+  img {
+    width: 100px;
+    height: 100px;
+  }
+}
