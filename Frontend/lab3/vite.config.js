@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  base: '/FrontendLabs/Frontend/lab3/',
+  base: '/FrontendLabs/Frontend/lab3/dist/',
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
