@@ -1,0 +1,91 @@
+@use "@/sass/base/mixins.scss" as *;
+@use "@/sass/base/variables.scss" as *;
+
+.catalog {
+  max-width: 1920px;
+  padding-bottom: 70px;
+
+  &__container {
+    max-width: 1440px;
+
+    margin: 0 auto;
+  }
+
+  &__title {
+    @include title;
+
+    font-size: 40px;
+    margin: 0 auto;
+
+    padding-bottom: 50px;
+  }
+
+  &__filter {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-between;
+
+    border: 1px solid $dark;
+    padding: 10px 30px 10px 30px;
+
+    max-width: 459px;
+    gap: 10px;
+
+    button {
+      @include button;
+
+      border: 0px;
+      font-size: 20px;
+      font-weight: 500;
+
+      &:hover,
+      &:focus-visible {
+        background: $light;
+        color: $dark;
+        outline: none;
+      }
+
+      &.active {
+        background: $light;
+        color: $dark;
+        outline: none;
+        border-bottom: 2px solid $dark;
+      }
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-flow: row wrap;
+  }
+}
+
+@media (max-width: 1200px) {
+  .catalog {
+    max-width: 1200px;
+
+    &__container {
+      max-width: 1140px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .catalog {
+    max-width: 768px;
+
+    &__container {
+      max-width: 720px;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .catalog {
+    max-width: 360px;
+
+    &__container {
+      max-width: 320px;
+    }
+  }
+}

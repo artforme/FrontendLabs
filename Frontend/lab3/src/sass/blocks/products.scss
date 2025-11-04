@@ -1,0 +1,115 @@
+@use "@/sass/base/variables.scss" as *;
+
+.products {
+  max-width: 1920px;
+
+  padding-bottom: 30px;
+
+  &__container {
+    max-width: 1440px;
+    min-height: 250px;
+
+    margin: 0 auto;
+
+    display: flex;
+    flex-flow: row wrap;
+
+    gap: 30px;
+
+    padding: 25px;
+
+    background:
+      linear-gradient(to right, $dark 0%, $dark 20%, transparent 20%) top / 100%
+        1px no-repeat,
+      linear-gradient(to bottom, $dark 0%, $dark 20%, transparent 20%) left /
+        1px 100% no-repeat;
+  }
+
+  &__card {
+    border: 1px solid $dark;
+    box-shadow: 0 5px 10px gray;
+  }
+
+  &__card-description {
+    display: flex;
+    flex-flow: column nowrap;
+
+    padding: 13px 0 13px 8px;
+    gap: 10px;
+  }
+
+  &__image {
+    max-width: 285px;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  &__price {
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 1200px) {
+  .products {
+    max-width: 1440px;
+
+    padding-bottom: 30px;
+
+    &__container {
+      max-width: 1140px;
+      min-height: 610px;
+    }
+
+    &__image {
+      max-width: 338px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .products {
+    max-width: 768px;
+
+    padding-bottom: 30px;
+
+    &__container {
+      padding: 10px;
+
+      max-width: 720px;
+      min-height: 610px;
+
+      gap: 18px;
+    }
+
+    &__image {
+      max-width: 338px;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .products {
+    max-width: 360px;
+
+    padding-bottom: 60px;
+
+    background: $light;
+
+    &__container {
+      padding: 0;
+
+      max-width: 340px;
+      background: none;
+
+      gap: 18px;
+    }
+
+    &__image {
+      max-width: 338px;
+    }
+  }
+}

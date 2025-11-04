@@ -1,0 +1,314 @@
+@use "@/sass/base/variables.scss" as *;
+@use "@/sass/base/mixins.scss" as *;
+
+.footer {
+  max-width: 1920px;
+  max-height: 425px;
+
+  padding-top: 50px;
+  background-color: $dark;
+
+  &__container {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-around;
+    align-items: flex-start;
+
+    padding: 0 20px;
+  }
+
+  &__title {
+    @include title;
+
+    font-size: 16px;
+    text-transform: uppercase;
+  }
+
+  &__bottom {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding-top: 60px;
+    padding-bottom: 20px;
+  }
+
+  &__text {
+    font-size: 14px;
+    color: $light;
+  }
+}
+
+.newsletter {
+  display: flex;
+  flex-flow: column nowrap;
+
+  gap: 35px;
+
+  &__container {
+    display: flex;
+    flex-flow: column nowrap;
+
+    max-width: 300px;
+    max-height: 260px;
+
+    gap: 20px;
+  }
+
+  &__input {
+    max-width: 293px;
+
+    background: transparent;
+    color: $ui-active;
+
+    border: 0;
+    border-bottom: 2px solid $light;
+    padding: 8px 3px 10px;
+    outline: none;
+
+    transition:
+      border-color 0.2s ease,
+      color 0.2s ease;
+
+    &::placeholder {
+      color: $ui-active;
+      font-weight: 400;
+    }
+
+    &:hover,
+    &:focus-visible {
+      border-color: $ui-active;
+      outline: none;
+    }
+
+    &.is-invalid {
+      border-color: $ui-error;
+
+      &::placeholder {
+        color: $ui-error;
+      }
+    }
+  }
+
+  &__checkbox {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 20px;
+
+    &__input {
+      appearance: none;
+      outline: none;
+
+      width: 15px;
+      height: 15px;
+
+      border: 1px solid $light;
+      border-radius: 3px;
+
+      &:checked {
+        background: center/10px 10px no-repeat url("/img/form/white-check.png");
+      }
+
+      &:focus,
+      &:focus-visible {
+        outline: none;
+        box-shadow: none;
+      }
+    }
+
+    &__text {
+      font-size: 14px;
+      color: $light;
+
+      a {
+        color: blueviolet;
+      }
+    }
+  }
+
+  &__title {
+    font-size: 16px;
+    color: $light;
+
+    text-transform: uppercase;
+  }
+
+  &__text {
+    font-size: 16px;
+
+    color: $light;
+  }
+
+  &__form {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: space-around;
+
+    gap: 30px;
+
+    max-width: 300px;
+    max-height: 260px;
+  }
+
+  &__submit {
+    @include button;
+
+    border: 1px solid $light;
+    color: $light;
+
+    width: 90px;
+    height: 40px;
+
+    &:hover,
+    &:focus-visible {
+      background: $light;
+      color: $dark;
+    }
+  }
+}
+
+.footer-nav {
+  max-width: 430px;
+  max-height: 120px;
+
+  display: flex;
+  flex-flow: row nowrap;
+
+  gap: 60px;
+
+  &__section {
+    max-width: 150px;
+  }
+
+  &__title {
+    color: $light;
+    font-size: 16px;
+    text-transform: uppercase;
+  }
+
+  &__list {
+    padding-left: 0;
+    padding-top: 30px;
+
+    li {
+      display: flex;
+      flex-flow: column nowrap;
+
+      justify-content: flex-start;
+      align-items: flex-start;
+
+      gap: 20px;
+
+      a {
+        font-size: 16px;
+        text-decoration: none;
+        color: $light;
+      }
+    }
+  }
+}
+
+.social {
+  display: flex;
+  flex-flow: column nowrap;
+
+  justify-content: space-between;
+
+  width: 90px;
+  height: 83px;
+
+  &__title {
+    color: $light;
+
+    font-size: 16px;
+    text-transform: uppercase;
+  }
+
+  &__list {
+    padding: 0;
+
+    li {
+      display: flex;
+      flex-flow: row nowrap;
+
+      gap: 10px;
+
+      img {
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .newsletter {
+    &__submit {
+      transition: none;
+      animation: none;
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .footer {
+    &__container {
+      justify-content: space-between;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .footer {
+    max-height: 573px;
+
+    &__container {
+      flex-flow: column nowrap;
+      align-items: center;
+      gap: 40px;
+    }
+  }
+
+  .newsletter {
+    align-items: center;
+  }
+
+  .footer-nav {
+    flex-flow: row wrap;
+    justify-content: center;
+  }
+
+  .social {
+    align-items: center;
+  }
+
+  .footer {
+    &__bottom {
+      padding-top: 40px;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .footer {
+    max-height: 914px;
+    max-width: 360px;
+
+    padding-bottom: 50px;
+
+    &__container {
+      margin-left: 10px;
+
+      flex-flow: column nowrap;
+
+      gap: 50px;
+    }
+  }
+
+  .footer-nav {
+    max-height: 236px;
+
+    flex-flow: row wrap;
+  }
+}

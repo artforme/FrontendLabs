@@ -1,0 +1,48 @@
+@use "@/sass/base/mixins.scss" as *;
+
+.map {
+  max-width: 1920px;
+
+  padding: 100px 0 100px 0;
+
+  &__container {
+    display: flex;
+    flex-flow: column nowrap;
+
+    align-items: center;
+
+    gap: 80px;
+
+    &__title {
+      @include title;
+
+      font-size: 40px;
+      text-transform: uppercase;
+    }
+  }
+
+  &__widget {
+    width: 663px;
+    height: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .map {
+    &__widget {
+      width: 663px;
+      height: 400px;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .map {
+    padding-left: 10px;
+
+    &__widget {
+      width: 340px;
+      height: 206px;
+    }
+  }
+}

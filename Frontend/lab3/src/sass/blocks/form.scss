@@ -1,0 +1,211 @@
+@use "@/sass/base/mixins.scss" as *;
+@use "@/sass/base/variables.scss" as *;
+
+.filling-form {
+  max-width: 1920px;
+}
+
+.contact-form {
+  max-width: 1365px;
+
+  margin: 0 auto;
+
+  &__title {
+    @include title;
+    font-size: 40px;
+    font-weight: 500;
+
+    text-transform: uppercase;
+  }
+
+  &__container {
+    padding-left: 20px;
+    padding-top: 80px;
+
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+
+    &__img {
+      width: 573px;
+      height: 356px;
+    }
+  }
+
+  &__field-group {
+    display: grid;
+
+    grid-template-columns: [start] 300px [line0] 300px [end];
+    grid-template-rows: [start] 70px [row0] 160px [row2] 23px [row3] 40px [end];
+
+    grid-auto-flow: row;
+
+    gap: 20px;
+
+    &__img {
+      height: 85px;
+      width: 85px;
+
+      z-index: 1;
+
+      place-self: end end;
+
+      grid-column: line0;
+      grid-row: row2 / end;
+    }
+  }
+
+  form {
+    margin-top: 20px;
+
+    place-self: start end;
+  }
+
+  &__button {
+    @include button;
+
+    width: 100%;
+    height: 100%;
+
+    max-height: 40px;
+    max-width: 220px;
+  }
+}
+
+.form-wrapper {
+  &__button {
+    margin: 0;
+
+    grid-row: row3;
+  }
+
+  &__box {
+    margin: 0;
+
+    grid-row: row2;
+  }
+}
+
+.contact-form form {
+  margin: 0;
+}
+
+.input {
+  @include input;
+
+  width: 300px;
+  height: 48px;
+
+  padding: 10px 15px 10px 15px;
+
+  &__label {
+    font-size: 16px;
+  }
+
+  &__wrapper {
+    margin-top: 5px;
+  }
+}
+
+.large-input {
+  @include input;
+
+  width: 300px;
+  height: 132px;
+
+  padding: 10px;
+
+  resize: none;
+}
+
+.flex {
+  width: 175px;
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+
+  a {
+    color: blueviolet;
+  }
+}
+
+@media (max-width: 1200px) {
+  .contact-form {
+    max-width: 1140px;
+
+    &__container {
+      justify-content: flex-start;
+      gap: 50px;
+
+      &__img {
+        width: 550px;
+        height: 341px;
+      }
+    }
+
+    &__field-group {
+      grid-template-columns: [start] 300px [line0] 220px [end];
+      grid-template-rows: [start] 70px [row0] 70px [row1] 160px [row2] 23px [row3] 40px [end];
+
+      grid-auto-flow: column;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .contact-form {
+    max-width: 696px;
+
+    &__container {
+      padding-left: 0px;
+
+      &__img {
+        width: 0px;
+      }
+    }
+
+    &__field-group {
+      grid-template-columns: [start] 300px [line0] 340px [end];
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .contact-form {
+    max-width: 340px;
+
+    &__title {
+      font-size: 32px;
+    }
+
+    &__container {
+      padding-top: 50px;
+      padding-left: 10px;
+    }
+
+    &__field-group {
+      display: flex;
+      flex-flow: column nowrap;
+    }
+
+    &__button {
+      width: 220px;
+      height: 40px;
+    }
+  }
+
+  .contact-form {
+    &__container {
+      &__img {
+        display: none;
+      }
+    }
+
+    &__field-group {
+      &__img {
+        display: none;
+      }
+    }
+  }
+}

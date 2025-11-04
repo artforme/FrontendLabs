@@ -1,0 +1,205 @@
+@use "@/sass/base/mixins.scss" as *;
+@use "@/sass/base/keyframes.scss" as *;
+@use "@/sass/base/variables.scss" as *;
+
+.promo {
+  width: 100%;
+  max-width: 1920px;
+  padding-bottom: 100px;
+
+  &__container {
+    width: 100%;
+    max-width: 1680px;
+
+    display: flex;
+    flex-direction: row;
+  }
+
+  &__image {
+    img {
+      width: 640px;
+      height: 900px;
+    }
+  }
+
+  &__information {
+    width: 100%;
+    max-width: 1040px;
+  }
+}
+
+.promo__animation {
+  height: 100%;
+  max-height: 654px;
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+  align-items: flex-end;
+
+  &__title {
+    width: 100%;
+    max-width: 470px;
+
+    padding-bottom: 100px;
+
+    font-style: italic;
+    font-weight: 200;
+    font-size: 32px;
+    text-transform: uppercase;
+  }
+
+  &__image {
+    display: flex;
+    flex-flow: column nowrap;
+
+    gap: 40px;
+
+    animation-duration: 2s;
+    animation-name: slidein;
+    animation-timing-function: ease-in-out;
+    animation-fill-mode: forwards;
+    animation-direction: reverse;
+
+    img {
+      width: 330px;
+      box-shadow: 5px 5px 10px 0px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  &__btn {
+    @include button;
+
+    width: 330px;
+    height: 60px;
+
+    font-size: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo__animation {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .promo {
+    max-width: 1200px;
+
+    &__container {
+      max-width: 1170px;
+    }
+
+    &__image {
+      img {
+        width: 450px;
+        height: 633px;
+      }
+    }
+
+    &__information {
+      max-width: 720px;
+    }
+  }
+
+  .promo__animation {
+    max-height: 440px;
+    gap: 8px;
+
+    &__title {
+      max-width: 329px;
+      font-size: 24px;
+    }
+
+    &__image {
+      width: 230px;
+
+      gap: 20px;
+    }
+
+    &__btn {
+      width: 230px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .promo {
+    max-width: 768px;
+
+    &__container {
+      margin-left: 95px;
+
+      max-width: 649px;
+    }
+
+    &__information {
+      max-width: 649px;
+    }
+
+    &__image {
+      img {
+        max-width: 0px;
+      }
+    }
+  }
+}
+
+.no-scroll {
+  overflow: hidden;
+}
+
+@media (max-width: 360px) {
+  .promo {
+    max-width: 360px;
+
+    padding-bottom: 60px;
+
+    &__container {
+      margin: 0 auto;
+      max-width: 340px;
+    }
+
+    &__information {
+      max-width: 340px;
+    }
+
+    &__image {
+      display: none;
+    }
+  }
+
+  .promo__animation {
+    padding-top: 50px;
+
+    max-height: 500px;
+
+    flex-flow: column nowrap;
+    justify-content: flex-start;
+    align-items: center;
+
+    gap: 40px;
+
+    &__image {
+      max-width: 270px;
+      align-items: center;
+
+      img {
+        max-height: 377px;
+        max-width: 270px;
+      }
+    }
+
+    &__btn {
+      max-height: 50px;
+    }
+
+    &__title {
+      padding: 0;
+
+      text-align: center;
+    }
+  }
+}
