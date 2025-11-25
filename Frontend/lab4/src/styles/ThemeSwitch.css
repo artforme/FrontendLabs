@@ -1,0 +1,60 @@
+html.inverted-theme {
+  filter: invert(100%);
+  background: #111;
+}
+
+html.inverted-theme img:not([src*=".svg"]),
+html.inverted-theme video,
+html.inverted-theme .weather-icon {
+  filter: invert(100%);
+}
+
+.theme-switch-container {
+  display: flex;
+  flex-flow: column nowrap;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+}
+
+.toggle-track {
+  position: relative;
+  width: 60px;
+  height: 25px;
+  background-color: var(--text-light);
+  border-radius: 34px;
+  transition: background-color var(--transition-normal);
+  cursor: pointer;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 20px;
+  height: 20px;
+
+  background-color: white;
+  border-radius: 50%;
+
+  transition: transform var(--transition-normal);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-track.active {
+  background-color: var(--secondary-color);
+}
+
+html.inverted-theme .toggle-track.active {
+  filter: invert(100%);
+}
+
+.toggle-track.active .toggle-thumb {
+  transform: translatex(30px);
+}
+
+.theme-status__text {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+}
