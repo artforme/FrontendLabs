@@ -1,0 +1,34 @@
+.unit-switch {
+  padding: 5px;
+
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 800;
+  user-select: none;
+
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.unit-switch span {
+  color: #ccc;
+  transition: color 0.3s;
+}
+
+.unit-switch span.active {
+  color: #000;
+}
+
+.unit-switch .separator {
+  color: #ccc;
+  margin: 0 2px;
+}
+
+html.inverted-theme .unit-switch span.active {
+  color: #000;
+}
+
+.unit-switch:hover span.active {
+  opacity: 0.8;
+}

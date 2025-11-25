@@ -1,0 +1,41 @@
+.location-badge {
+  color: var(--text-main);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  transition: opacity var(--transition-normal);
+}
+
+.location-badge:hover {
+  opacity: 0.7;
+}
+
+.location-badge.detecting {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.location-icon {
+  color: var(--primary-color);
+}
+
+.location-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.location-city {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.location-country {
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  font-weight: 500;
+}
