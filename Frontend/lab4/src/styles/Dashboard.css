@@ -1,0 +1,186 @@
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  width: 100%;
+
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.main-column,
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.metric-card {
+  padding: 16px;
+
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.metric-card span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+
+  margin-bottom: 4px;
+}
+
+.metric-card strong {
+  color: var(--text-main);
+  font-size: 1.1rem;
+}
+
+.sun-cycle {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.sun-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 5px;
+}
+
+.sun-time {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.separator-line {
+  width: 1px;
+  height: 40px;
+
+  background-color: var(--border-color);
+}
+
+.aqi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+}
+
+.aqi-card h3 {
+  margin: 0;
+
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.aqi-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.aqi-badge {
+  width: 40px;
+  height: 40px;
+
+  border-radius: 50%;
+  color: #fff;
+  font-weight: bold;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.forecast-container {
+  padding: 20px;
+}
+
+.forecast-title {
+  color: var(--text-main);
+
+  margin: 0 0 15px 0;
+  font-size: 1.1rem;
+}
+
+.forecast-list {
+  padding-bottom: 5px;
+
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+
+  overflow-x: auto;
+}
+
+.forecast-card {
+  min-width: 70px;
+
+  background: var(--bg-neutral);
+
+  padding: 12px 8px;
+  border-radius: 12px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  transition: background var(--transition-fast);
+}
+
+.forecast-card:hover {
+  background: var(--bg-neutral-hover);
+}
+
+.forecast-day {
+  color: var(--text-secondary);
+
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  text-transform: capitalize;
+}
+
+.forecast-card img {
+  width: 40px;
+  height: 40px;
+}
+
+.forecast-temp-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.forecast-temp-max {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.forecast-temp-min {
+  font-weight: 400;
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
