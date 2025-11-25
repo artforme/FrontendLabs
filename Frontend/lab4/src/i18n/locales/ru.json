@@ -1,0 +1,37 @@
+{
+  "search_placeholder": "Введите город...",
+  "search_button": "Поиск",
+  "light_mode": "Светлая тема",
+  "dark_mode": "Темная тема",
+  "detecting": "Определение...",
+  "location_title": "Нажмите для поиска",
+  "location_detecting_title": "Определение местоположения...",
+  "loading": "Загрузка...",
+  "no_results": "Ничего не найдено",
+  "recent_searches": "Недавние",
+  "clear_history": "Очистить",
+
+  "empty_state_text": "Введите город, чтобы увидеть погоду",
+  "error_fetching": "Ошибка при загрузке данных",
+  "loading_message": "Загрузка данных о погоде...",
+  "network_error": "Ошибка соединения с сетью",
+
+  "feels_like": "Ощущается как",
+  "humidity": "Влажность",
+  "wind": "Ветер",
+  "pressure": "Давление",
+  "visibility": "Видимость",
+
+  "sunrise": "Рассвет",
+  "sunset": "Закат",
+  "day_length": "Долгота дня",
+
+  "forecast_title": "Прогноз на 5 дней",
+
+  "aqi_title": "Качество воздуха",
+  "aqi_good": "Хорошее",
+  "aqi_fair": "Приемлемое",
+  "aqi_moderate": "Среднее",
+  "aqi_poor": "Плохое",
+  "aqi_very_poor": "Очень плохое"
+}
