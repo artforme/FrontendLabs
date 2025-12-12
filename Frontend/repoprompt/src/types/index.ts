@@ -8,6 +8,17 @@ export interface TreeNode {
     content?: string;
 }
 
+export interface HistoryProject {
+    id: number;
+    name: string;
+    date: string;
+    language: string;
+    filesCount: number;
+    allowedCount: number;
+    tokensCount: number;
+    size: string;
+}
+
 export interface User {
     name: string;
     email: string;

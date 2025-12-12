@@ -1,10 +1,8 @@
-/* src/index.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Остальные твои стили */
 * {
   font-family: 'Inter', sans-serif;
 }
@@ -28,41 +26,37 @@ code, .mono {
   transition: transform 0.1s ease-out;
 }
 
+/* Статусы файлов */
 .file-item.forbidden {
   opacity: 0.5;
   text-decoration: line-through;
 }
-
 .file-item.forbidden .icon-status {
-  color: #ef4444;
+  color: #ef4444; /* red-500 */
 }
-
 .file-item.allowed .icon-status {
-  color: #22c55e;
+  color: #22c55e; /* green-500 */
 }
 
+/* Drag & Drop */
 .drop-zone.drag-over {
   border-color: #3b82f6 !important;
   background: rgba(59, 130, 246, 0.1) !important;
 }
 
+/* Modal */
 .modal-overlay {
   backdrop-filter: blur(4px);
 }
 
+/* Animations */
 .panel-item {
   animation: slideIn 0.2s ease-out;
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .progress-bar {
@@ -72,36 +66,15 @@ code, .mono {
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
-}
-
-.light ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-}
-
-.light ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
+.light ::-webkit-scrollbar-thumb { background: #d1d5db; }
+.light ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }

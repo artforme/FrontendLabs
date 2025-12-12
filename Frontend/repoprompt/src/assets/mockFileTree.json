@@ -1,0 +1,63 @@
+{
+    "name": "my-project",
+    "path": "/my-project",
+    "type": "folder",
+    "allowed": true,
+    "expanded": true,
+    "children": [
+        {
+            "name": "src",
+            "path": "/my-project/src",
+            "type": "folder",
+            "allowed": true,
+            "expanded": true,
+            "children": [
+                {
+                    "name": "App.tsx",
+                    "path": "/my-project/src/App.tsx",
+                    "type": "file",
+                    "allowed": true,
+                    "content": "import React from 'react';\nfunction App() {\n  return <div>Hello World</div>;\n}\nexport default App;"
+                },
+                {
+                    "name": "components",
+                    "path": "/my-project/src/components",
+                    "type": "folder",
+                    "allowed": true,
+                    "expanded": false,
+                    "children": [
+                        {
+                            "name": "Header.tsx",
+                            "path": "/my-project/src/components/Header.tsx",
+                            "type": "file",
+                            "allowed": true,
+                            "content": "// Header code here..."
+                        },
+                        {
+                            "name": "Footer.tsx",
+                            "path": "/my-project/src/components/Footer.tsx",
+                            "type": "file",
+                            "allowed": true,
+                            "content": "// Footer code here..."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "node_modules",
+            "path": "/my-project/node_modules",
+            "type": "folder",
+            "allowed": false,
+            "expanded": false,
+            "children": []
+        },
+        {
+            "name": "package.json",
+            "path": "/my-project/package.json",
+            "type": "file",
+            "allowed": true,
+            "content": "{ \"name\": \"my-project\", \"version\": \"1.0.0\" }"
+        }
+    ]
+}

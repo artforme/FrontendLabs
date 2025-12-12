@@ -1,0 +1,52 @@
+[
+    {
+        "id": 1,
+        "name": "My React App",
+        "date": "2025-12-10T14:30:00",
+        "language": "TypeScript",
+        "filesCount": 45,
+        "allowedCount": 32,
+        "tokensCount": 12000,
+        "size": "2.5 MB"
+    },
+    {
+        "id": 2,
+        "name": "Backend API",
+        "date": "2025-12-09T10:15:00",
+        "language": "JavaScript",
+        "filesCount": 28,
+        "allowedCount": 25,
+        "tokensCount": 8500,
+        "size": "1.8 MB"
+    },
+    {
+        "id": 3,
+        "name": "Data Analysis Script",
+        "date": "2025-12-08T16:45:00",
+        "language": "Python",
+        "filesCount": 15,
+        "allowedCount": 12,
+        "tokensCount": 4500,
+        "size": "800 KB"
+    },
+    {
+        "id": 4,
+        "name": "Vue Dashboard",
+        "date": "2025-12-07T09:00:00",
+        "language": "Vue",
+        "filesCount": 52,
+        "allowedCount": 40,
+        "tokensCount": 15000,
+        "size": "3.2 MB"
+    },
+    {
+        "id": 5,
+        "name": "Utility Library",
+        "date": "2025-12-06T18:20:00",
+        "language": "TypeScript",
+        "filesCount": 20,
+        "allowedCount": 18,
+        "tokensCount": 6000,
+        "size": "1.2 MB"
+    }
+]
