@@ -61,6 +61,8 @@ function App() {
                         treeState={treeState}
                         addToBlacklist={panels.addToBlacklist}
                         addToAllowedlist={panels.addToAllowedlist}
+                        removeFromBlacklistByValue={panels.removeFromBlacklistByValue}
+                        removeFromAllowedlistByValue={panels.removeFromAllowedlistByValue}
                     />
 
                     <AllowedlistPanel

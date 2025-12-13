@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export const usePanels = (
     showToast: (message: string, type: 'success' | 'error' | 'info') => void
@@ -18,44 +18,82 @@ export const usePanels = (
         localStorage.setItem('allowedlist', JSON.stringify(allowedlist));
     }, [blacklist, allowedlist]);
 
-    const addToBlacklist = (item: string) => {
-        if (item && !blacklist.includes(item)) {
-            // Удаляем из allowedlist если есть
-            if (allowedlist.includes(item)) {
-                setAllowedlist(prev => prev.filter(i => i !== item));
-            }
-            setBlacklist(prev => [...prev, item]);
+    /**
+     * Добавляет в blacklist (и удаляет из allowedlist если есть)
+     */
+    const addToBlacklist = useCallback((item: string) => {
+        if (!item) return;
+
+        // Удаляем из allowedlist если есть
+        setAllowedlist(prev => prev.filter(i => i !== item));
+
+        // Добавляем в blacklist если ещё нет
+        setBlacklist(prev => {
+            if (prev.includes(item)) return prev;
             showToast(`Добавлено в blacklist: ${item}`, 'info');
-        }
-    };
+            return [...prev, item];
+        });
+    }, [showToast]);
 
-    const removeFromBlacklist = (index: number) => {
+    /**
+     * Удаляет из blacklist
+     */
+    const removeFromBlacklist = useCallback((index: number) => {
         setBlacklist(prev => prev.filter((_, i) => i !== index));
-        showToast('Удалено из blacklist', 'info');
-    };
+    }, []);
 
-    const addToAllowedlist = (item: string) => {
-        if (item && !allowedlist.includes(item)) {
-            // Удаляем из blacklist если есть
-            if (blacklist.includes(item)) {
-                setBlacklist(prev => prev.filter(i => i !== item));
+    /**
+     * Удаляет из blacklist по значению (для использования из дерева)
+     */
+    const removeFromBlacklistByValue = useCallback((item: string) => {
+        setBlacklist(prev => {
+            const filtered = prev.filter(i => i !== item);
+            if (filtered.length < prev.length) {
+                // Что-то удалили — не показываем toast, это автоматическое действие
             }
-            setAllowedlist(prev => [...prev, item]);
-            showToast(`Добавлено в whitelist: ${item}`, 'info');
-        }
-    };
+            return filtered;
+        });
+    }, []);
 
-    const removeFromAllowedlist = (index: number) => {
+    /**
+     * Добавляет в allowedlist (и удаляет из blacklist если есть)
+     */
+    const addToAllowedlist = useCallback((item: string) => {
+        if (!item) return;
+
+        // Удаляем из blacklist если есть
+        setBlacklist(prev => prev.filter(i => i !== item));
+
+        // Добавляем в allowedlist если ещё нет
+        setAllowedlist(prev => {
+            if (prev.includes(item)) return prev;
+            showToast(`Добавлено в allowedlist: ${item}`, 'info');
+            return [...prev, item];
+        });
+    }, [showToast]);
+
+    /**
+     * Удаляет из allowedlist
+     */
+    const removeFromAllowedlist = useCallback((index: number) => {
         setAllowedlist(prev => prev.filter((_, i) => i !== index));
-        showToast('Удалено из whitelist', 'info');
-    };
+    }, []);
+
+    /**
+     * Удаляет из allowedlist по значению (для использования из дерева)
+     */
+    const removeFromAllowedlistByValue = useCallback((item: string) => {
+        setAllowedlist(prev => prev.filter(i => i !== item));
+    }, []);
 
     return {
         blacklist,
         allowedlist,
         addToBlacklist,
         removeFromBlacklist,
+        removeFromBlacklistByValue,
         addToAllowedlist,
         removeFromAllowedlist,
+        removeFromAllowedlistByValue,
     };
 };

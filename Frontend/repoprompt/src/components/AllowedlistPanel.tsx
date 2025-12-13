@@ -27,7 +27,7 @@ export const AllowedlistPanel = ({ allowedlist, addToAllowedlist, removeFromAllo
             <div className="p-4 border-b border-gray-200 dark:border-gray-800">
                 <h3 className="font-semibold text-green-500 flex items-center gap-2 mb-3">
                     <CheckCircle className="w-5 h-5" />
-                    Whitelist
+                    Allowedlist
                 </h3>
                 <div className="flex gap-2">
                     <input
