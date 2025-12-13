@@ -1,5 +1,6 @@
+// src/hooks/useFileTree.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
-import mockTree from '../assets/mockFileTree.json';
+import { parseZipToTree, type ParseProgress } from '../utils/zipParser';
 import { applyFilters, findNode, setNodeStatus } from '../utils/treeUtils';
 import type { TreeNode } from '../types';
 
@@ -8,6 +9,8 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     const [originalStatus, setOriginalStatus] = useState<Record<string, boolean>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [loadingPercent, setLoadingPercent] = useState(0);
+    const [loadingStage, setLoadingStage] = useState<string>('');
+    const [currentFile, setCurrentFile] = useState<string>('');
 
     // UI State
     const [zoom, setZoom] = useState(1);
@@ -18,16 +21,13 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     const [startY, setStartY] = useState(0);
     const [search, setSearch] = useState('');
 
-    // Ref для контейнера и актуального состояния fileTree
     const containerRef = useRef<HTMLDivElement | null>(null);
     const fileTreeRef = useRef<TreeNode | null>(null);
 
-    // Синхронизируем ref с state (для доступа в event listener)
     useEffect(() => {
         fileTreeRef.current = fileTree;
     }, [fileTree]);
 
-    // Zoom с ограничениями
     const MIN_ZOOM = 0.25;
     const MAX_ZOOM = 3;
     const ZOOM_STEP = 0.1;
@@ -42,41 +42,33 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [blacklist, allowedlist]);
 
-    // Добавляем wheel listener с { passive: false }
+    // Wheel listener для zoom
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
-            // Не зумим если дерево не загружено
             if (!fileTreeRef.current) return;
-
             e.preventDefault();
 
             const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
 
             setZoom(prevZoom => {
                 const newZoom = Math.min(Math.max(prevZoom + delta, MIN_ZOOM), MAX_ZOOM);
-
                 if (newZoom !== prevZoom) {
                     const rect = container.getBoundingClientRect();
                     const mouseX = e.clientX - rect.left;
                     const mouseY = e.clientY - rect.top;
-
                     const scale = newZoom / prevZoom;
                     setPanX(prev => mouseX - (mouseX - prev) * scale);
                     setPanY(prev => mouseY - (mouseY - prev) * scale);
                 }
-
                 return newZoom;
             });
         };
 
         container.addEventListener('wheel', handleWheel, { passive: false });
-
-        return () => {
-            container.removeEventListener('wheel', handleWheel);
-        };
+        return () => container.removeEventListener('wheel', handleWheel);
     }, []);
 
     const zoomIn = useCallback(() => {
@@ -96,7 +88,6 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     }, []);
 
     const onMouseDown = useCallback((e: React.MouseEvent) => {
-        // Не драгаем если дерево не загружено
         if (!fileTree) return;
         if ((e.target as HTMLElement).closest('.file-item')) return;
         setIsDragging(true);
@@ -139,42 +130,57 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         }
         setFileTree(treeCopy);
 
-        return {
-            wasAllowed,
-            wasOriginallyAllowed,
-            relativePath
-        };
+        return { wasAllowed, wasOriginallyAllowed, relativePath };
     }, [fileTree, originalStatus]);
 
-    const simulateFileUpload = useCallback(() => {
+    /**
+     * Реальный парсинг ZIP-архива
+     */
+    const parseZipFile = useCallback(async (file: File) => {
         setIsLoading(true);
         setLoadingPercent(0);
+        setLoadingStage('reading');
+        setCurrentFile('');
 
-        // Сбрасываем zoom/pan при новой загрузке
+        // Сбрасываем zoom/pan
         setZoom(1);
         setPanX(0);
         setPanY(0);
 
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
+        try {
+            const handleProgress = (progress: ParseProgress) => {
+                setLoadingPercent(progress.percent);
+                setLoadingStage(progress.stage);
+                if (progress.currentFile) {
+                    setCurrentFile(progress.currentFile);
+                }
+            };
 
-                setTimeout(() => {
-                    const newTree = JSON.parse(JSON.stringify(mockTree)) as TreeNode;
-                    const newOriginalStatus: Record<string, boolean> = {};
-                    applyFilters(newTree, [], [], newOriginalStatus, true);
-                    setOriginalStatus(newOriginalStatus);
-                    setFileTree(newTree);
-                    setIsLoading(false);
-                    setLoadingPercent(0);
-                }, 300);
-            }
-            setLoadingPercent(Math.round(progress));
-        }, 100);
-    }, []);
+            const tree = await parseZipToTree(file, handleProgress);
+
+            // Сохраняем оригинальные статусы
+            const newOriginalStatus: Record<string, boolean> = {};
+            const collectStatus = (node: TreeNode) => {
+                newOriginalStatus[node.path] = node.allowed;
+                node.children?.forEach(collectStatus);
+            };
+            collectStatus(tree);
+
+            // Применяем пользовательские фильтры
+            applyFilters(tree, blacklist, allowedlist, newOriginalStatus, true);
+
+            setOriginalStatus(newOriginalStatus);
+            setFileTree(tree);
+        } catch (error) {
+            console.error('Error parsing ZIP:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+            setLoadingPercent(0);
+            setLoadingStage('');
+            setCurrentFile('');
+        }
+    }, [blacklist, allowedlist]);
 
     return {
         fileTree,
@@ -183,11 +189,13 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         setFileTree,
         isLoading,
         loadingPercent,
+        loadingStage,
+        currentFile,
         zoom, panX, panY, isDragging, search,
         setSearch, zoomIn, zoomOut, resetZoom,
         onMouseDown, onMouseMove, onMouseUp,
         containerRef,
         toggleNodeStatus,
-        simulateFileUpload,
+        parseZipFile, // Новый метод вместо simulateFileUpload
     };
 };

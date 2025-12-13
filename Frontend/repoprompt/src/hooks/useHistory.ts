@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { HistoryProject } from '../types';
 
-// Мок-данные напрямую в хуке
+// Мок-данные
 const MOCK_HISTORY: HistoryProject[] = [
     {
         id: 1,
@@ -56,7 +56,6 @@ const MOCK_HISTORY: HistoryProject[] = [
 ];
 
 export const useHistory = (
-    simulateFileUpload: () => void,
     showToast: (message: string, type: 'success' | 'error' | 'info') => void
 ) => {
     const [history, setHistory] = useState<HistoryProject[]>([]);
@@ -116,27 +115,28 @@ export const useHistory = (
         }
     }, [history]);
 
+    // Пока просто показываем toast — в ЛР6 здесь будет реальная загрузка из IndexedDB
     const loadProjectFromHistory = useCallback(() => {
         if (selectedProject) {
-            simulateFileUpload();
-            showToast(`Проект "${selectedProject.name}" загружен`, 'success');
+            showToast(`Загрузка проекта "${selectedProject.name}" будет доступна в следующей версии`, 'info');
             setPreviewModalVisible(false);
         }
-    }, [selectedProject, simulateFileUpload, showToast]);
+    }, [selectedProject, showToast]);
 
     const downloadFromHistory = useCallback((id: number) => {
         const project = history.find(p => p.id === id);
         if (!project) return;
 
         const output = `# ${project.name}
-# Downloaded from History
-# Language: ${project.language}
-# Files: ${project.allowedCount}/${project.filesCount}
-# Tokens: ~${project.tokensCount}
-# Size: ${project.size}
+
+Downloaded from History
+Language: ${project.language}
+Files: ${project.allowedCount}/${project.filesCount}
+Tokens: ~${project.tokensCount}
+Size: ${project.size}
 
 // This is a mock download from history
-// In real implementation, this would contain actual file contents
+// In ЛР6, this would contain actual file contents from IndexedDB
 `;
 
         const blob = new Blob([output], { type: 'text/plain' });
@@ -156,6 +156,16 @@ export const useHistory = (
         showToast('История восстановлена', 'info');
     }, [showToast]);
 
+    // Функция для добавления нового проекта в историю (будет использоваться после загрузки ZIP)
+    const addToHistory = useCallback((project: Omit<HistoryProject, 'id' | 'date'>) => {
+        const newProject: HistoryProject = {
+            ...project,
+            id: Date.now(),
+            date: new Date().toISOString(),
+        };
+        setHistory(prev => [newProject, ...prev].slice(0, 10)); // Храним только 10 последних
+    }, []);
+
     return {
         history,
         selectedProject,
@@ -167,5 +177,6 @@ export const useHistory = (
         deleteFromHistory,
         clearHistory,
         resetToMocks,
+        addToHistory, // Новая функция для добавления проектов
     };
 };

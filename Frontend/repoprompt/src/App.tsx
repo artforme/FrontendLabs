@@ -23,16 +23,81 @@ import { usePanels } from './hooks/usePanels';
 import { useHistory } from './hooks/useHistory';
 import { useToast } from './hooks/useToast';
 
+// Utils
+import { calculateTreeStats } from './utils/treeUtils';
+
 function App() {
     const { toast, showToast, hideToast } = useToast();
     const { theme, toggleTheme } = useTheme();
     const auth = useAuth(showToast);
     const panels = usePanels(showToast);
     const treeState = useFileTree(panels.blacklist, panels.allowedlist);
-    const historyState = useHistory(treeState.simulateFileUpload, showToast);
+    const historyState = useHistory(showToast); // Убрали parseZipFile
 
     const [activeModal, setActiveModal] = useState<'login' | 'register' | 'history' | 'defaultBlacklist' | null>(null);
     const closeModal = () => setActiveModal(null);
+
+    // Определение языка проекта по файлам
+    const detectLanguage = (tree: typeof treeState.fileTree): string => {
+        if (!tree) return 'Unknown';
+
+        const extensions: Record<string, number> = {};
+
+        const countExtensions = (node: typeof tree) => {
+            if (node.type === 'file') {
+                const ext = node.name.split('.').pop()?.toLowerCase() || '';
+                extensions[ext] = (extensions[ext] || 0) + 1;
+            }
+            node.children?.forEach(countExtensions);
+        };
+
+        countExtensions(tree);
+
+        // Определяем язык по преобладающим расширениям
+        if (extensions['tsx'] || extensions['ts']) return 'TypeScript';
+        if (extensions['jsx'] || extensions['js']) return 'JavaScript';
+        if (extensions['py']) return 'Python';
+        if (extensions['vue']) return 'Vue';
+        if (extensions['java']) return 'Java';
+        if (extensions['go']) return 'Go';
+        if (extensions['rs']) return 'Rust';
+        if (extensions['rb']) return 'Ruby';
+        if (extensions['php']) return 'PHP';
+
+        return 'Unknown';
+    };
+
+    // Форматирование размера файла
+    const formatFileSize = (bytes: number): string => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    // Обёртка для загрузки файла с обработкой ошибок
+    const handleFileUpload = async (file: File) => {
+        try {
+            await treeState.parseZipFile(file);
+
+            // После успешной загрузки добавляем в историю
+            if (treeState.fileTree) {
+                const stats = calculateTreeStats(treeState.fileTree);
+                historyState.addToHistory({
+                    name: file.name.replace('.zip', ''),
+                    language: detectLanguage(treeState.fileTree),
+                    filesCount: stats.total,
+                    allowedCount: stats.allowed,
+                    tokensCount: stats.tokens,
+                    size: formatFileSize(file.size),
+                });
+            }
+
+            showToast(`Архив "${file.name}" успешно загружен!`, 'success');
+        } catch (error) {
+            console.error('Upload error:', error);
+            showToast('Ошибка при обработке архива', 'error');
+        }
+    };
 
     return (
         <div className="min-h-screen transition-colors duration-300 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
@@ -45,9 +110,17 @@ function App() {
             />
 
             <main className="max-w-[1800px] mx-auto p-4">
-                <DropZone onFileUpload={treeState.simulateFileUpload} />
+                <DropZone
+                    onFileUpload={handleFileUpload}
+                    isLoading={treeState.isLoading}
+                />
 
-                <ProgressBar isVisible={treeState.isLoading} percent={treeState.loadingPercent} />
+                <ProgressBar
+                    isVisible={treeState.isLoading}
+                    percent={treeState.loadingPercent}
+                    stage={treeState.loadingStage}
+                    currentFile={treeState.currentFile}
+                />
 
                 <div className="grid grid-cols-[300px_1fr_300px] gap-4 h-[calc(100vh-280px)] min-h-[500px]">
                     <BlacklistPanel
@@ -72,14 +145,22 @@ function App() {
                     />
                 </div>
 
-                <ActionButtons fileTree={treeState.originalFileTree} showToast={showToast} />
+                <ActionButtons fileTree={treeState.fileTree} showToast={showToast} />
             </main>
 
             {/* Modals */}
-            {activeModal === 'login' && <LoginModal onClose={closeModal} onLogin={auth.login} />}
-            {activeModal === 'register' && <RegisterModal onClose={closeModal} onRegister={auth.register} />}
-            {activeModal === 'history' && <HistoryModal onClose={closeModal} historyState={historyState} />}
-            {activeModal === 'defaultBlacklist' && <DefaultBlacklistModal onClose={closeModal} />}
+            {activeModal === 'login' && (
+                <LoginModal onClose={closeModal} onLogin={auth.login} />
+            )}
+            {activeModal === 'register' && (
+                <RegisterModal onClose={closeModal} onRegister={auth.register} />
+            )}
+            {activeModal === 'history' && (
+                <HistoryModal onClose={closeModal} historyState={historyState} />
+            )}
+            {activeModal === 'defaultBlacklist' && (
+                <DefaultBlacklistModal onClose={closeModal} />
+            )}
 
             {historyState.previewModalVisible && (
                 <StructurePreviewModal

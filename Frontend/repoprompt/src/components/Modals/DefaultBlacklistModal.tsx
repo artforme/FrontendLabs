@@ -18,7 +18,7 @@ export const DefaultBlacklistModal = ({ onClose }: DefaultBlacklistModalProps) =
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Эти элементы исключаются автоматически:
                 </p>
-                <ul className="space-y-2 max-h-96 overflow-y-auto">
+                <ul className="space-y-2 max-h-96 overflow-y-auto pr-2">
                     {DEFAULT_BLACKLIST.map((item, index) => (
                         <li key={index} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-sm text-red-600 dark:text-red-400 mono">
                             {item}
