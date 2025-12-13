@@ -1,0 +1,129 @@
+import { X, Clock, FileText, Tag, Folder, Download, Trash, RotateCcw } from 'lucide-react';
+import { formatRelativeTime, getLanguageGradient, getLanguageIcon } from '../../utils/historyUtils';
+import type { HistoryProject } from '../../types';
+
+interface HistoryState {
+    history: HistoryProject[];
+    previewStructure: (id: number) => void;
+    downloadFromHistory: (id: number) => void;
+    deleteFromHistory: (id: number) => void;
+    clearHistory: () => void;
+    resetToMocks?: () => void;
+}
+
+interface HistoryModalProps {
+    onClose: () => void;
+    historyState: HistoryState;
+}
+
+export const HistoryModal = ({ onClose, historyState }: HistoryModalProps) => {
+    const { history, previewStructure, downloadFromHistory, deleteFromHistory, clearHistory, resetToMocks } = historyState;
+
+    return (
+        <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-[800px] max-h-[80vh] flex flex-col shadow-2xl">
+                <div className="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Clock className="w-6 h-6 text-blue-500" />
+                        История проектов
+                    </h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                    {history.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                            <Clock className="w-16 h-16 mb-4 opacity-50" />
+                            <p className="text-lg font-medium mb-4">История пуста</p>
+                            {resetToMocks && (
+                                <button
+                                    onClick={resetToMocks}
+                                    className="px-4 py-2 bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-lg font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <RotateCcw className="w-4 h-4" />
+                                    Загрузить демо-данные
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        history.map((project, index) => (
+                            <div
+                                key={project.id}
+                                className="history-item bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 transition-all"
+                                style={{ animationDelay: `${index * 50}ms` }}
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-4 flex-1">
+                                        <div className={`w-12 h-12 bg-gradient-to-br ${getLanguageGradient(project.language)} rounded-xl flex items-center justify-center flex-shrink-0 text-white`}>
+                                            {getLanguageIcon(project.language)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-lg truncate text-gray-900 dark:text-white">{project.name}</h4>
+                                            <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="w-4 h-4" />
+                                                    {formatRelativeTime(project.date)}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <FileText className="w-4 h-4" />
+                                                    {project.allowedCount}/{project.filesCount}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Tag className="w-4 h-4" />
+                                                    ~{project.tokensCount.toLocaleString()}
+                                                </span>
+                                                <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs text-gray-700 dark:text-gray-200">
+                                                    {project.language}
+                                                </span>
+                                                <span>{project.size}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <button
+                                            onClick={() => previewStructure(project.id)}
+                                            className="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-gray-700 dark:text-gray-200"
+                                        >
+                                            <Folder className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Структура</span>
+                                        </button>
+                                        <button
+                                            onClick={() => downloadFromHistory(project.id)}
+                                            className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-white"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            <span className="hidden sm:inline">TXT</span>
+                                        </button>
+                                        <button
+                                            onClick={() => deleteFromHistory(project.id)}
+                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                        >
+                                            <Trash className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {history.length > 0 && (
+                    <div className="mt-4 flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <span className="text-sm text-gray-500">
+                            {history.length} проект(ов) в истории
+                        </span>
+                        <button
+                            onClick={clearHistory}
+                            className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 rounded-lg font-medium transition-colors flex items-center gap-2"
+                        >
+                            <Trash className="w-4 h-4" />
+                            Очистить историю
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
