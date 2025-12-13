@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/FrontendLabs/',
+  base: '/FrontendLabs/Frontend/repoprompt/dist/',
   plugins: [
     react(),
     tailwindcss(),
