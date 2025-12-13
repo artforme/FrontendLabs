@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Folder, File, ChevronRight, Check, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, ChevronRight, Check, X } from 'lucide-react';
 import { estimateTokens, getRelativePath } from '../utils/treeUtils';
 import type { TreeNode } from '../types';
 
@@ -25,6 +25,58 @@ interface FileTreeProps {
     addToBlacklist: (item: string) => void;
     addToAllowedlist: (item: string) => void;
 }
+
+// Иконка папки (заполненная, как в оригинале)
+const FolderIcon = ({ allowed }: { allowed: boolean }) => (
+    <svg
+        className={`w-5 h-5 ${allowed ? 'text-yellow-400' : 'text-gray-500'}`}
+        fill="currentColor"
+        viewBox="0 0 24 24"
+    >
+        <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+);
+
+// Иконка файла с цветом по расширению
+const FileIcon = ({ name, allowed }: { name: string; allowed: boolean }) => {
+    const ext = name.split('.').pop()?.toLowerCase() || '';
+
+    const colors: Record<string, string> = {
+        ts: 'text-blue-400',
+        tsx: 'text-blue-400',
+        js: 'text-yellow-400',
+        jsx: 'text-yellow-400',
+        json: 'text-yellow-300',
+        css: 'text-pink-400',
+        scss: 'text-pink-400',
+        html: 'text-orange-400',
+        md: 'text-gray-300',
+        py: 'text-green-400',
+        svg: 'text-orange-300',
+        ico: 'text-purple-400',
+        txt: 'text-gray-400',
+        gitignore: 'text-gray-400',
+        env: 'text-yellow-500',
+    };
+
+    const color = allowed ? (colors[ext] || 'text-blue-400') : 'text-gray-500';
+
+    return (
+        <svg
+            className={`w-5 h-5 ${color}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+        </svg>
+    );
+};
 
 export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTreeProps) => {
     const {
@@ -54,17 +106,10 @@ export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTr
     const stats = calculateStats(fileTree);
 
     const handleToggle = (path: string, node: TreeNode) => {
-        // Получаем статус ДО изменения
         const wasAllowed = node.allowed;
-
-        // Меняем статус
         toggleNodeStatus(path);
-
-        // Получаем относительный путь
         const relativePath = getRelativePath(node);
 
-        // Если БЫЛ разрешён (а теперь запрещён) → добавляем в blacklist
-        // Если БЫЛ запрещён (а теперь разрешён) → добавляем в whitelist
         if (wasAllowed) {
             addToBlacklist(relativePath);
         } else {
@@ -112,7 +157,9 @@ export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTr
                 >
                     {!fileTree ? (
                         <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                            <Folder className="w-16 h-16 mb-4 opacity-50" />
+                            <svg className="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
                             <p className="text-sm">Загрузите ZIP-архив для просмотра структуры</p>
                         </div>
                     ) : (
@@ -169,7 +216,7 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
                     }`}
                 style={{ marginLeft: `${indent}px` }}
             >
-                {/* Expand Arrow (только для папок) */}
+                {/* Expand Arrow */}
                 {isFolder ? (
                     <button
                         onClick={handleExpandClick}
@@ -184,18 +231,18 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
                     <span className="w-5" />
                 )}
 
-                {/* Icon */}
+                {/* Icon — теперь кастомные SVG */}
                 {isFolder ? (
-                    <Folder className={`w-5 h-5 ${node.allowed ? 'text-yellow-500' : 'text-gray-400'}`} />
+                    <FolderIcon allowed={node.allowed} />
                 ) : (
-                    <File className={`w-5 h-5 ${node.allowed ? 'text-blue-500' : 'text-gray-400'}`} />
+                    <FileIcon name={node.name} allowed={node.allowed} />
                 )}
 
                 {/* Name */}
                 <span
                     className={`mono text-sm flex-1 ${node.allowed
-                            ? 'text-gray-800 dark:text-gray-200'
-                            : 'text-gray-400 dark:text-gray-500 line-through'
+                        ? 'text-gray-800 dark:text-gray-200'
+                        : 'text-gray-400 dark:text-gray-500 line-through'
                         }`}
                     onClick={handleExpandClick}
                 >
@@ -206,8 +253,8 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
                 <button
                     onClick={handleStatusClick}
                     className={`p-1 rounded transition-colors ${node.allowed
-                            ? 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-500'
-                            : 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
+                        ? 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-500'
+                        : 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
                         }`}
                 >
                     {node.allowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
@@ -221,7 +268,7 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
                         <RecursiveNode
                             key={child.path}
                             node={child}
-                            depth={depth + 1}  // ← ИСПРАВЛЕНО: теперь depth увеличивается
+                            depth={depth + 1}
                             onToggle={onToggle}
                         />
                     ))}
