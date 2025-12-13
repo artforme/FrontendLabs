@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import mockTree from '../assets/mockFileTree.json';
 import { applyFilters, findNode, setNodeStatus } from '../utils/treeUtils';
 import type { TreeNode } from '../types';
@@ -6,7 +6,9 @@ import type { TreeNode } from '../types';
 export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     const [fileTree, setFileTree] = useState<TreeNode | null>(null);
     const [originalStatus, setOriginalStatus] = useState<Record<string, boolean>>({});
-    
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingPercent, setLoadingPercent] = useState(0);
+
     // UI State
     const [zoom, setZoom] = useState(1);
     const [panX, setPanX] = useState(0);
@@ -16,15 +18,12 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     const [startY, setStartY] = useState(0);
     const [search, setSearch] = useState('');
 
-    useEffect(() => {
-        setFileTree(mockTree as TreeNode);
-        applyFilters(mockTree as TreeNode, blacklist, allowedlist, originalStatus, true);
-    }, []);
-
+    // Применяем фильтры при изменении blacklist/allowedlist
     useEffect(() => {
         if (fileTree) {
-            applyFilters(fileTree, blacklist, allowedlist, originalStatus);
-            setFileTree({ ...fileTree });
+            const treeCopy = JSON.parse(JSON.stringify(fileTree));
+            applyFilters(treeCopy, blacklist, allowedlist, originalStatus, false);
+            setFileTree(treeCopy);
         }
     }, [blacklist, allowedlist]);
 
@@ -51,30 +50,61 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
 
     const onMouseUp = () => setIsDragging(false);
 
-    const toggleNodeStatus = (path: string) => {
-        if (!fileTree) return;
+    const toggleNodeStatus = useCallback((path: string): boolean | null => {
+        if (!fileTree) return null;
         const node = findNode(fileTree, path);
-        if (node) {
-            const newStatus = !node.allowed;
-            setNodeStatus(node, newStatus);
-            setFileTree({ ...fileTree });
+        if (!node) return null;
+
+        // Возвращаем ТЕКУЩИЙ статус ДО изменения
+        const wasAllowed = node.allowed;
+        const newStatus = !wasAllowed;
+
+        // Создаём копию дерева и применяем изменения
+        const treeCopy = JSON.parse(JSON.stringify(fileTree));
+        const nodeCopy = findNode(treeCopy, path);
+        if (nodeCopy) {
+            setNodeStatus(nodeCopy, newStatus);
         }
-    };
+        setFileTree(treeCopy);
 
-    const simulateFileUpload = () => {
-        setFileTree(mockTree as TreeNode);
-        const newOriginalStatus = {};
-        applyFilters(mockTree as TreeNode, [], [], newOriginalStatus, true);
-        setOriginalStatus(newOriginalStatus);
-    };
+        return wasAllowed; // Возвращаем, был ли разрешён ДО клика
+    }, [fileTree]);
 
-    // Filter tree for search
+    const simulateFileUpload = useCallback(() => {
+        setIsLoading(true);
+        setLoadingPercent(0);
+
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+
+                setTimeout(() => {
+                    const newTree = JSON.parse(JSON.stringify(mockTree)) as TreeNode;
+                    const newOriginalStatus: Record<string, boolean> = {};
+                    applyFilters(newTree, [], [], newOriginalStatus, true);
+                    setOriginalStatus(newOriginalStatus);
+                    setFileTree(newTree);
+                    setIsLoading(false);
+                    setLoadingPercent(0);
+                }, 300);
+            }
+            setLoadingPercent(Math.round(progress));
+        }, 100);
+    }, []);
+
+    // Фильтрация дерева для поиска
     const filteredTree = fileTree ? filterTreeBySearch(fileTree, search) : null;
 
     return {
         fileTree: filteredTree,
-        setFileTree,      // <-- ЭТО ВАЖНО, ОНО БЫЛО ПРОПУЩЕНО В ТВОЕМ КОДЕ
-        originalStatus,   // <-- И ЭТО
+        originalFileTree: fileTree,
+        setFileTree,
+        originalStatus,
+        isLoading,
+        loadingPercent,
         zoom, panX, panY, isDragging, search,
         setSearch, zoomIn, zoomOut, resetZoom,
         onMouseDown, onMouseMove, onMouseUp,
@@ -86,7 +116,7 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
 function filterTreeBySearch(node: TreeNode, query: string): TreeNode | null {
     if (!query) return node;
     const nameMatch = node.name.toLowerCase().includes(query.toLowerCase());
-    
+
     if (node.type === 'file') {
         return nameMatch ? node : null;
     }
@@ -95,7 +125,7 @@ function filterTreeBySearch(node: TreeNode, query: string): TreeNode | null {
         const filteredChildren = node.children
             ?.map(child => filterTreeBySearch(child, query))
             .filter(Boolean) as TreeNode[];
-            
+
         if (nameMatch || (filteredChildren && filteredChildren.length > 0)) {
             return { ...node, children: filteredChildren || [] };
         }

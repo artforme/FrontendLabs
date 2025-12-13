@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Folder, File, CheckCircle, XCircle } from 'lucide-react';
-import { findNode, estimateTokens } from '../utils/treeUtils';
+import { ZoomIn, ZoomOut, RotateCcw, Folder, File, ChevronRight, Check, X } from 'lucide-react';
+import { estimateTokens, getRelativePath } from '../utils/treeUtils';
 import type { TreeNode } from '../types';
 
 export interface TreeState {
@@ -17,7 +17,7 @@ export interface TreeState {
     onMouseDown: (e: React.MouseEvent) => void;
     onMouseMove: (e: React.MouseEvent) => void;
     onMouseUp: () => void;
-    toggleNodeStatus: (path: string) => void;
+    toggleNodeStatus: (path: string) => boolean | null;
 }
 
 interface FileTreeProps {
@@ -53,41 +53,45 @@ export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTr
 
     const stats = calculateStats(fileTree);
 
-    const handleToggle = (path: string) => {
+    const handleToggle = (path: string, node: TreeNode) => {
+        // Получаем статус ДО изменения
+        const wasAllowed = node.allowed;
+
+        // Меняем статус
         toggleNodeStatus(path);
-        const node = findNode(fileTree, path);
-        if (node) {
-            const relativePath = node.path.split('/').slice(1).join('/');
-            // Логика: если сейчас разрешен (будет запрещен -> blacklist), если запрещен (будет разрешен -> allowedlist)
-            // Примечание: так как toggleNodeStatus асинхронный, мы используем текущее состояние node.allowed
-            if (node.allowed) {
-                addToBlacklist(relativePath);
-            } else {
-                addToAllowedlist(relativePath);
-            }
+
+        // Получаем относительный путь
+        const relativePath = getRelativePath(node);
+
+        // Если БЫЛ разрешён (а теперь запрещён) → добавляем в blacklist
+        // Если БЫЛ запрещён (а теперь разрешён) → добавляем в whitelist
+        if (wasAllowed) {
+            addToBlacklist(relativePath);
+        } else {
+            addToAllowedlist(relativePath);
         }
     };
 
     return (
-        <div className="bg-gray-900 rounded-2xl border border-gray-800 flex flex-col overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden shadow-sm">
             {/* Toolbar */}
-            <div className="p-3 border-b border-gray-800 flex items-center justify-between">
+            <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                 <input
                     type="text"
                     placeholder="Поиск файлов..."
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm w-48 focus:outline-none focus:border-blue-500 transition-colors text-gray-900 dark:text-gray-100 placeholder-gray-400"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
                 <div className="flex items-center gap-1">
-                    <button onClick={zoomOut} className="p-2 hover:bg-gray-800 rounded-lg transition-colors" title="Уменьшить">
+                    <button onClick={zoomOut} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400">
                         <ZoomOut className="w-4 h-4" />
                     </button>
                     <span className="text-xs text-gray-500 w-12 text-center">{Math.round(zoom * 100)}%</span>
-                    <button onClick={zoomIn} className="p-2 hover:bg-gray-800 rounded-lg transition-colors" title="Увеличить">
+                    <button onClick={zoomIn} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400">
                         <ZoomIn className="w-4 h-4" />
                     </button>
-                    <button onClick={resetZoom} className="p-2 hover:bg-gray-800 rounded-lg transition-colors ml-2" title="Сбросить">
+                    <button onClick={resetZoom} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors ml-2 text-gray-600 dark:text-gray-400">
                         <RotateCcw className="w-4 h-4" />
                     </button>
                 </div>
@@ -95,64 +99,134 @@ export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTr
 
             {/* Canvas */}
             <div
-                className="tree-container flex-1 bg-gray-950/50 relative"
+                className="tree-container flex-1 bg-gray-50 dark:bg-gray-950/50 relative min-h-[300px]"
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
                 onMouseUp={onMouseUp}
                 onMouseLeave={onMouseUp}
                 style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             >
-                <div className="tree-content p-4 min-w-max" style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})` }}>
+                <div
+                    className="tree-content p-4 min-w-max"
+                    style={{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
+                >
                     {!fileTree ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                            <svg className="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
+                        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                            <Folder className="w-16 h-16 mb-4 opacity-50" />
                             <p className="text-sm">Загрузите ZIP-архив для просмотра структуры</p>
                         </div>
                     ) : (
-                        <RecursiveNode node={fileTree} depth={0} toggleStatus={handleToggle} />
+                        <RecursiveNode node={fileTree} depth={0} onToggle={handleToggle} />
                     )}
                 </div>
             </div>
 
             {/* Stats Bar */}
-            <div className="p-3 border-t border-gray-800 flex items-center justify-between text-sm text-gray-400">
-                <div className="flex items-center gap-4">
-                    <span><strong>{stats.total}</strong> файлов</span>
-                    <span><strong>{stats.allowed}</strong> разрешено</span>
-                    <span className="text-red-400"><strong>{stats.forbidden}</strong> запрещено</span>
+            {fileTree && (
+                <div className="p-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900">
+                    <div className="flex items-center gap-4">
+                        <span><strong className="text-gray-900 dark:text-gray-200">{stats.total}</strong> файлов</span>
+                        <span className="text-green-600 dark:text-green-400"><strong>{stats.allowed}</strong> разрешено</span>
+                        <span className="text-red-500 dark:text-red-400"><strong>{stats.forbidden}</strong> запрещено</span>
+                    </div>
+                    <span>~<strong className="text-gray-900 dark:text-gray-200">{stats.tokens.toLocaleString()}</strong> токенов</span>
                 </div>
-                <span>~<strong>{stats.tokens}</strong> токенов</span>
-            </div>
+            )}
         </div>
     );
 };
 
-const RecursiveNode = ({ node, depth, toggleStatus }: { node: TreeNode; depth: number; toggleStatus: (path: string) => void }) => {
-    const [expanded, setExpanded] = useState(node.expanded ?? false);
-    const indent = depth * 16;
+interface RecursiveNodeProps {
+    node: TreeNode;
+    depth: number;
+    onToggle: (path: string, node: TreeNode) => void;
+}
 
-    const handleClick = (e: React.MouseEvent) => {
+const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
+    const [expanded, setExpanded] = useState(node.expanded ?? (depth < 2));
+    const indent = depth * 20;
+    const isFolder = node.type === 'folder';
+
+    const handleExpandClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        toggleStatus(node.path);
+        if (isFolder && node.allowed) {
+            setExpanded(!expanded);
+        }
+    };
+
+    const handleStatusClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onToggle(node.path, node);
     };
 
     return (
-        <div style={{ paddingLeft: `${indent}px` }}>
+        <div>
             <div
-                className={`file-item flex items-center gap-2 cursor-pointer ${!node.allowed ? 'forbidden opacity-50 line-through' : 'allowed'}`}
-                onClick={() => node.type === 'folder' ? setExpanded(!expanded) : toggleStatus(node.path)}
+                className={`file-item flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors
+                    ${node.allowed
+                        ? 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                        : 'opacity-50 hover:bg-red-50 dark:hover:bg-red-900/10'
+                    }`}
+                style={{ marginLeft: `${indent}px` }}
             >
-                {node.type === 'folder' ? <Folder className="w-4 h-4" /> : <File className="w-4 h-4" />}
-                <span className="mono text-sm">{node.name}</span>
-                <span onClick={handleClick} className="ml-auto icon-status hover:bg-gray-800 rounded p-0.5">
-                    {node.allowed ? <CheckCircle className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                {/* Expand Arrow (только для папок) */}
+                {isFolder ? (
+                    <button
+                        onClick={handleExpandClick}
+                        className={`p-0.5 rounded transition-colors ${node.allowed ? 'hover:bg-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed'}`}
+                        disabled={!node.allowed}
+                    >
+                        <ChevronRight
+                            className={`w-4 h-4 text-gray-400 transition-transform ${expanded && node.allowed ? 'rotate-90' : ''}`}
+                        />
+                    </button>
+                ) : (
+                    <span className="w-5" />
+                )}
+
+                {/* Icon */}
+                {isFolder ? (
+                    <Folder className={`w-5 h-5 ${node.allowed ? 'text-yellow-500' : 'text-gray-400'}`} />
+                ) : (
+                    <File className={`w-5 h-5 ${node.allowed ? 'text-blue-500' : 'text-gray-400'}`} />
+                )}
+
+                {/* Name */}
+                <span
+                    className={`mono text-sm flex-1 ${node.allowed
+                            ? 'text-gray-800 dark:text-gray-200'
+                            : 'text-gray-400 dark:text-gray-500 line-through'
+                        }`}
+                    onClick={handleExpandClick}
+                >
+                    {node.name}
                 </span>
+
+                {/* Status Toggle */}
+                <button
+                    onClick={handleStatusClick}
+                    className={`p-1 rounded transition-colors ${node.allowed
+                            ? 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-500'
+                            : 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
+                        }`}
+                >
+                    {node.allowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                </button>
             </div>
-            {expanded && node.children?.map(child => (
-                <RecursiveNode key={child.path} node={child} depth={0} toggleStatus={toggleStatus} />
-            ))}
+
+            {/* Children */}
+            {isFolder && expanded && node.allowed && node.children && (
+                <div>
+                    {node.children.map(child => (
+                        <RecursiveNode
+                            key={child.path}
+                            node={child}
+                            depth={depth + 1}  // ← ИСПРАВЛЕНО: теперь depth увеличивается
+                            onToggle={onToggle}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

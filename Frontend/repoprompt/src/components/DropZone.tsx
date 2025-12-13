@@ -39,21 +39,25 @@ export const DropZone = ({ onFileUpload }: DropZoneProps) => {
 
     return (
         <div
-            className={`drop-zone border-2 border-dashed border-gray-700 rounded-2xl p-8 mb-4 bg-gray-900/50 hover:border-gray-600 transition-all cursor-pointer ${isDragOver ? 'drag-over border-blue-500 bg-blue-500/10' : ''}`}
+            className={`drop-zone border-2 border-dashed rounded-2xl p-8 mb-4 transition-all cursor-pointer
+                ${isDragOver
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10'
+                    : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 hover:border-gray-400 dark:hover:border-gray-600'
+                }`}
             onClick={handleClick}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
             <div className="flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
-                    <CloudUpload className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
+                    <CloudUpload className="w-8 h-8 text-gray-500 dark:text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold mb-1">Перетащите ZIP-архив сюда</h3>
-                <p className="text-gray-500 text-sm mb-3">или нажмите для выбора файла</p>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <span className="px-2 py-1 bg-gray-800 rounded">.zip</span>
-                    <span className="px-2 py-1 bg-gray-800 rounded">до 100 MB</span>
+                <h3 className="text-lg font-semibold mb-1 text-gray-800 dark:text-gray-100">Перетащите ZIP-архив сюда</h3>
+                <p className="text-gray-500 dark:text-gray-500 text-sm mb-3">или нажмите для выбора файла</p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="px-2 py-1 bg-gray-200 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">.zip</span>
+                    <span className="px-2 py-1 bg-gray-200 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">до 100 MB</span>
                 </div>
             </div>
             <input

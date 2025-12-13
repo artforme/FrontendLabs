@@ -1,14 +1,26 @@
 @import "tailwindcss";
 
+/* ВАЖНО: Включаем class-based dark mode для Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Остальные твои стили */
 * {
   font-family: 'Inter', sans-serif;
 }
 
-code, .mono {
+code,
+.mono {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* Base styles for light/dark */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 .tree-container {
@@ -26,18 +38,6 @@ code, .mono {
   transition: transform 0.1s ease-out;
 }
 
-/* Статусы файлов */
-.file-item.forbidden {
-  opacity: 0.5;
-  text-decoration: line-through;
-}
-.file-item.forbidden .icon-status {
-  color: #ef4444; /* red-500 */
-}
-.file-item.allowed .icon-status {
-  color: #22c55e; /* green-500 */
-}
-
 /* Drag & Drop */
 .drop-zone.drag-over {
   border-color: #3b82f6 !important;
@@ -50,13 +50,21 @@ code, .mono {
 }
 
 /* Animations */
-.panel-item {
+.panel-item,
+.history-item {
   animation: slideIn 0.2s ease-out;
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .progress-bar {
@@ -66,15 +74,63 @@ code, .mono {
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+/* Scrollbar - Dark */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-.light ::-webkit-scrollbar-thumb { background: #d1d5db; }
-.light ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Scrollbar - Light */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* File Tree hover effects */
+.file-item {
+  transition: all 0.15s ease;
+}
+
+/* History item hover */
+.history-item {
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  transform: translateX(4px);
+}

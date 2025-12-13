@@ -24,107 +24,70 @@ import { useHistory } from './hooks/useHistory';
 import { useToast } from './hooks/useToast';
 
 function App() {
-    // 1. Инициализируем базовые UI хуки
-    const { toast, showToast } = useToast();
-    // Важно: достаем toggleTheme, чтобы передать его в Header
-    const { theme, toggleTheme } = useTheme(); 
-
-    // 2. Auth State
+    const { toast, showToast, hideToast } = useToast();
+    const { theme, toggleTheme } = useTheme();
     const auth = useAuth(showToast);
-
-    // 3. File Tree & Panels Logic
-    // Инициализируем дерево с пустыми фильтрами. 
-    // usePanels обновит дерево сразу после монтирования, применив сохраненные фильтры.
-    const treeState = useFileTree([], []); 
-    
-    const panels = usePanels(
-        treeState.fileTree, 
-        treeState.setFileTree, 
-        treeState.originalStatus,
-        showToast
-    );
-
-    // 4. History State
+    const panels = usePanels(showToast);
+    const treeState = useFileTree(panels.blacklist, panels.allowedlist);
     const historyState = useHistory(treeState.simulateFileUpload, showToast);
 
-    // 5. Modal State Management
-    // Типизируем стейт, чтобы он совпадал с ожидаемыми значениями
     const [activeModal, setActiveModal] = useState<'login' | 'register' | 'history' | 'defaultBlacklist' | null>(null);
-
     const closeModal = () => setActiveModal(null);
 
     return (
-        <div className={`min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'bg-gray-950 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-            <Header 
-                auth={auth} 
-                theme={theme} 
+        <div className="min-h-screen transition-colors duration-300 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+            <Header
+                auth={auth}
+                theme={theme}
                 toggleTheme={toggleTheme}
                 historyCount={historyState.history.length}
-                // Обертка нужна для совпадения типов TS
-                openModal={(name) => setActiveModal(name)} 
+                openModal={(name) => setActiveModal(name)}
             />
 
             <main className="max-w-[1800px] mx-auto p-4">
                 <DropZone onFileUpload={treeState.simulateFileUpload} />
-                
-                {/* Фейковый прогресс (можно подключить стейт позже) */}
-                <ProgressBar isVisible={false} percent={0} />
+
+                <ProgressBar isVisible={treeState.isLoading} percent={treeState.loadingPercent} />
 
                 <div className="grid grid-cols-[300px_1fr_300px] gap-4 h-[calc(100vh-280px)] min-h-[500px]">
-                    <BlacklistPanel 
-                        blacklist={panels.blacklist} 
-                        addToBlacklist={panels.addToBlacklist} 
+                    <BlacklistPanel
+                        blacklist={panels.blacklist}
+                        addToBlacklist={panels.addToBlacklist}
                         removeFromBlacklist={panels.removeFromBlacklist}
                         openDefaultModal={() => setActiveModal('defaultBlacklist')}
                     />
 
-                    <FileTree 
+                    <FileTree
                         treeState={treeState}
                         addToBlacklist={panels.addToBlacklist}
                         addToAllowedlist={panels.addToAllowedlist}
                     />
 
-                    <AllowedlistPanel 
+                    <AllowedlistPanel
                         allowedlist={panels.allowedlist}
                         addToAllowedlist={panels.addToAllowedlist}
                         removeFromAllowedlist={panels.removeFromAllowedlist}
                     />
                 </div>
 
-                <ActionButtons fileTree={treeState.fileTree} showToast={showToast} />
+                <ActionButtons fileTree={treeState.originalFileTree} showToast={showToast} />
             </main>
 
-            {/* Modals Rendering */}
-            {activeModal === 'login' && (
-                <LoginModal onClose={closeModal} onLogin={auth.login} />
-            )}
-            {activeModal === 'register' && (
-                <RegisterModal onClose={closeModal} onRegister={auth.register} />
-            )}
-            {activeModal === 'history' && (
-                <HistoryModal 
-                    onClose={closeModal} 
-                    historyState={historyState} 
-                />
-            )}
-            {activeModal === 'defaultBlacklist' && (
-                <DefaultBlacklistModal onClose={closeModal} />
-            )}
-            
-            {/* Модалка превью управляется своим внутренним состоянием внутри hook useHistory, 
-                но рендерится здесь, используя данные из historyState */}
+            {/* Modals */}
+            {activeModal === 'login' && <LoginModal onClose={closeModal} onLogin={auth.login} />}
+            {activeModal === 'register' && <RegisterModal onClose={closeModal} onRegister={auth.register} />}
+            {activeModal === 'history' && <HistoryModal onClose={closeModal} historyState={historyState} />}
+            {activeModal === 'defaultBlacklist' && <DefaultBlacklistModal onClose={closeModal} />}
+
             {historyState.previewModalVisible && (
-                <StructurePreviewModal 
+                <StructurePreviewModal
                     onClose={() => historyState.setPreviewModalVisible(false)}
                     project={historyState.selectedProject}
                     onLoad={historyState.loadProjectFromHistory}
                 />
             )}
 
-            {/* Toast Notifications */}
-            {toast && (
-                <Toast message={toast.message} type={toast.type} onClose={() => {}} />
-            )}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
         </div>
     );
 }

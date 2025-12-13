@@ -15,13 +15,11 @@ export const useHistory = (
         if (storedHistory) {
             setHistory(JSON.parse(storedHistory));
         } else {
-            // Инициализация мок-данными при первом запуске
             setHistory(mockHistory);
             localStorage.setItem('history', JSON.stringify(mockHistory));
         }
     }, []);
 
-    // Синхронизация с localStorage при изменениях
     useEffect(() => {
         localStorage.setItem('history', JSON.stringify(history));
     }, [history]);
@@ -61,7 +59,7 @@ export const useHistory = (
         const project = history.find(p => p.id === id);
         if (!project) return;
 
-        const output = `# ${project.name}\n# Downloaded from History\n...`;
+        const output = `# ${project.name}\n# Downloaded from History\n# Files: ${project.filesCount}\n# Tokens: ~${project.tokensCount}\n...`;
         const blob = new Blob([output], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -69,7 +67,7 @@ export const useHistory = (
         a.download = `${project.name}-history.txt`;
         a.click();
         URL.revokeObjectURL(url);
-        
+
         showToast(`Файл "${project.name}" скачан`, 'success');
     };
 
@@ -77,7 +75,7 @@ export const useHistory = (
         history,
         selectedProject,
         previewModalVisible,
-        setPreviewModalVisible, // Важно экспортировать сеттер для закрытия модалки
+        setPreviewModalVisible,
         previewStructure,
         loadProjectFromHistory,
         downloadFromHistory,

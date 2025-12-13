@@ -1,6 +1,21 @@
 import type { TreeNode } from '../types';
 
-export const DEFAULT_BLACKLIST = ['.git', 'node_modules', 'build', 'dist', '.next'];
+export const DEFAULT_BLACKLIST = [
+    '.git',
+    'node_modules',
+    'build',
+    'dist',
+    '.next',
+    '__pycache__',
+    '.venv',
+    'venv',
+    '.env',
+    '.DS_Store',
+    'Thumbs.db',
+    'coverage',
+    '.idea',
+    '.vscode'
+];
 
 export function findNode(tree: TreeNode | null, path: string): TreeNode | null {
     if (!tree) return null;
@@ -32,34 +47,39 @@ export function applyFilters(
 
     function applyToNode(node: TreeNode, parentForbidden: boolean = false): void {
         const name = node.name;
-        const relativePath = node.path.split('/').slice(1).join('/') || node.path;
+        const relativePath = node.path.split('/').filter(Boolean).slice(1).join('/') || name;
 
         let defaultAllowed = true;
 
+        // Проверяем дефолтный blacklist
         if (DEFAULT_BLACKLIST.some(b => name === b || name.startsWith(b + '/'))) {
             defaultAllowed = false;
         }
 
+        // Если родитель запрещён
         if (parentForbidden) {
             defaultAllowed = false;
         }
 
+        // При первой загрузке сохраняем исходный статус
         if (isInitial) {
             originalStatus[node.path] = defaultAllowed;
         }
 
         node.allowed = defaultAllowed;
 
-        if (blacklist.some(b => name === b || name.endsWith(b) || relativePath === b)) {
+        // Применяем пользовательский blacklist
+        if (blacklist.some(b => name === b || name.endsWith(b) || relativePath === b || relativePath.startsWith(b + '/'))) {
             node.allowed = false;
         }
 
-        if (allowedlist.some(w => name === w || name.endsWith(w) || relativePath === w)) {
+        // Применяем пользовательский whitelist (перезаписывает blacklist)
+        if (allowedlist.some(w => name === w || name.endsWith(w) || relativePath === w || relativePath.startsWith(w + '/'))) {
             node.allowed = true;
         }
 
         if (node.children) {
-            node.children.forEach(child => applyToNode(child, !defaultAllowed));
+            node.children.forEach(child => applyToNode(child, !node.allowed));
         }
     }
 
@@ -72,7 +92,7 @@ export function estimateTokens(content: string): number {
 
 export function collectFilesForDownload(node: TreeNode, output: string[] = []): string[] {
     if (node.type === 'file' && node.allowed && node.content) {
-        const relativePath = node.path.split('/').slice(1).join('/');
+        const relativePath = node.path.split('/').filter(Boolean).slice(1).join('/');
         output.push(`├─ ${relativePath}\n${node.content}\n\n`);
     }
     if (node.children) {
@@ -83,11 +103,17 @@ export function collectFilesForDownload(node: TreeNode, output: string[] = []): 
 
 export function collectFilesForCopy(node: TreeNode, output: string[] = []): string[] {
     if (node.type === 'file' && node.allowed && node.content) {
-        const relativePath = node.path.split('/').slice(1).join('/');
+        const relativePath = node.path.split('/').filter(Boolean).slice(1).join('/');
         output.push(`├─ ${relativePath}\n\`\`\`\n${node.content}\n\`\`\`\n\n`);
     }
     if (node.children) {
         node.children.forEach(child => collectFilesForCopy(child, output));
     }
     return output;
+}
+
+// ЭТА ФУНКЦИЯ БЫЛА ПРОПУЩЕНА — добавляем её
+export function getRelativePath(node: TreeNode): string {
+    const parts = node.path.split('/').filter(Boolean);
+    return parts.length > 1 ? parts.slice(1).join('/') : node.name;
 }
