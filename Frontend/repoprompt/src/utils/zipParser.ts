@@ -85,7 +85,7 @@ export async function parseZipToTree(
     nodeMap.set(root.path, root);
 
     const entries = Object.entries(zip.files);
-    const totalFiles = entries.length;
+    // const totalFiles = entries.length;
     let processed = 0;
 
     // ★ Сначала строим структуру БЕЗ чтения содержимого
