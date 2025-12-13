@@ -204,64 +204,58 @@ export function getRelativePath(node: TreeNode): string {
 // ============ ФИЛЬТРАЦИЯ ============
 
 /**
- * Применяет фильтры к дереву
- * @param isInitial - true при первой загрузке (сохраняет originalStatus)
+ * Применяет фильтры к дереву, мутируя свойство .allowed узлов
  */
 export function applyFilters(
     fileTree: TreeNode | null,
     blacklist: string[],
     allowedlist: string[],
-    originalStatus: Record<string, boolean>,
-    isInitial: boolean = false
 ): void {
     if (!fileTree) return;
 
-    function applyToNode(node: TreeNode, parentForbidden: boolean = false): void {
-        const name = node.name;
+    function applyToNode(node: TreeNode, parentForbidden: boolean): void {
         const relativePath = getRelativePath(node);
+        const name = node.name;
 
-        // Определяем дефолтное состояние
-        let defaultAllowed = true;
-
-        // Проверяем дефолтный blacklist
+        // 1. Проверяем дефолтный blacklist (базовое состояние)
         const isDefaultBlacklisted = DEFAULT_BLACKLIST.some(pattern =>
             matchesGlob(relativePath, pattern) || name === pattern
         );
 
-        if (isDefaultBlacklisted) {
-            defaultAllowed = false;
-        }
+        // По умолчанию разрешено, если не в дефолтном черном списке
+        let isAllowed = !isDefaultBlacklisted;
 
-        // Если родитель запрещён — дети тоже
+        // Если родитель запрещен, ребенок тоже запрещен (наследование)
         if (parentForbidden) {
-            defaultAllowed = false;
+            isAllowed = false;
         }
 
-        // При первой загрузке сохраняем исходный статус
-        if (isInitial) {
-            originalStatus[node.path] = defaultAllowed;
-        }
-
-        // Начинаем с дефолтного состояния
-        node.allowed = defaultAllowed;
-
-        // Применяем пользовательский blacklist (glob-паттерны)
+        // 2. Применяем пользовательский Blacklist (перекрывает дефолт)
         if (blacklist.some(pattern => matchesGlob(relativePath, pattern))) {
-            node.allowed = false;
+            isAllowed = false;
         }
 
-        // Применяем пользовательский allowedlist (перезаписывает blacklist)
+        // 3. Применяем пользовательский Allowedlist (ВЫСШИЙ ПРИОРИТЕТ)
+        // Это позволяет делать исключения: забанить src, но разрешить src/App.tsx
         if (allowedlist.some(pattern => matchesGlob(relativePath, pattern))) {
-            node.allowed = true;
+            isAllowed = true;
         }
 
-        // Рекурсивно обрабатываем детей
+        // Присваиваем результат
+        node.allowed = isAllowed;
+
+        // Рекурсия
         if (node.children) {
+            // Передаем статус текущего узла как "родительский запрет", 
+            // ТОЛЬКО если он запрещен не по причине allowedlist.
+            // Но для простоты: если узел запрещен, дети по дефолту запрещены,
+            // пока их явно не разрешит allowedlist.
             node.children.forEach(child => applyToNode(child, !node.allowed));
         }
     }
 
-    applyToNode(fileTree);
+    // Запускаем от корня. Корень считается "не запрещенным родителем".
+    applyToNode(fileTree, false);
 }
 
 // ============ СТАТИСТИКА ============

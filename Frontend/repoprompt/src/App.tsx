@@ -130,8 +130,11 @@ function App() {
                         openDefaultModal={() => setActiveModal('defaultBlacklist')}
                     />
 
-                    <FileTree
+                     <FileTree
                         treeState={treeState}
+                        blacklist={panels.blacklist}
+                        allowedlist={panels.allowedlist}
+                        // ==================
                         addToBlacklist={panels.addToBlacklist}
                         addToAllowedlist={panels.addToAllowedlist}
                         removeFromBlacklistByValue={panels.removeFromBlacklistByValue}

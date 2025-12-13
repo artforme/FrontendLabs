@@ -137,3 +137,13 @@ html.dark {
 .history-item:hover {
   transform: translateX(4px);
 }
+
+.will-change-transform {
+    will-change: transform;
+}
+
+.tree-content {
+    /* GPU-ускорение */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
