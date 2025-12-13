@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, ChevronRight, Check, X, MousePointer2 } from 'lucide-react';
-import { estimateTokens } from '../utils/treeUtils';
+import { estimateTokens, getRelativePath } from '../utils/treeUtils';
 import type { TreeNode } from '../types';
 
 export interface TreeState {
     fileTree: TreeNode | null;
-    originalStatus: Record<string, boolean>;
     zoom: number;
     panX: number;
     panY: number;
@@ -19,11 +18,8 @@ export interface TreeState {
     onMouseMove: (e: React.MouseEvent) => void;
     onMouseUp: () => void;
     containerRef: React.RefObject<HTMLDivElement | null>;
-    toggleNodeStatus: (path: string) => {
-        wasAllowed: boolean;
-        wasOriginallyAllowed: boolean;
-        relativePath: string;
-    } | null;
+    toggleNodeStatus: (path: string) => { nowAllowed: boolean; relativePath: string } | null;
+    getNodeStatus: (node: TreeNode) => boolean;
 }
 
 interface FileTreeProps {
@@ -71,25 +67,20 @@ const FileIcon = ({ name, allowed }: { name: string; allowed: boolean }) => {
 
     return (
         <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
     );
 };
 
 // Проверка совпадения с поиском
-const matchesSearch = (node: TreeNode, query: string): boolean => {
+const matchesSearch = (node: TreeNode, query: string, getStatus: (n: TreeNode) => boolean): boolean => {
     if (!query) return true;
     const lowerQuery = query.toLowerCase();
 
     if (node.name.toLowerCase().includes(lowerQuery)) return true;
 
     if (node.type === 'folder' && node.children) {
-        return node.children.some(child => matchesSearch(child, lowerQuery));
+        return node.children.some(child => matchesSearch(child, lowerQuery, getStatus));
     }
 
     return false;
@@ -103,17 +94,20 @@ export const FileTree = ({
     removeFromAllowedlistByValue
 }: FileTreeProps) => {
     const {
-        fileTree, originalStatus, zoom, panX, panY, isDragging, search, setSearch,
-        zoomIn, zoomOut, resetZoom, onMouseDown, onMouseMove, onMouseUp, containerRef, toggleNodeStatus
+        fileTree, zoom, panX, panY, isDragging, search, setSearch,
+        zoomIn, zoomOut, resetZoom, onMouseDown, onMouseMove, onMouseUp,
+        containerRef, toggleNodeStatus, getNodeStatus
     } = treeState;
 
+    // Вычисляем статистику
     const calculateStats = (node: TreeNode | null) => {
         if (!node) return { total: 0, allowed: 0, forbidden: 0, tokens: 0 };
         let total = 0, allowed = 0, forbidden = 0, tokens = 0;
+
         const traverse = (n: TreeNode) => {
             if (n.type === 'file') {
                 total++;
-                if (n.allowed) {
+                if (getNodeStatus(n)) {
                     allowed++;
                     tokens += estimateTokens(n.content || '');
                 } else {
@@ -122,31 +116,26 @@ export const FileTree = ({
             }
             n.children?.forEach(traverse);
         };
+
         traverse(node);
         return { total, allowed, forbidden, tokens };
     };
 
     const stats = calculateStats(fileTree);
 
-    const handleToggle = (path: string) => {
+    const handleToggle = (path: string, node: TreeNode) => {
         const result = toggleNodeStatus(path);
         if (!result) return;
 
-        const { wasAllowed, wasOriginallyAllowed, relativePath } = result;
-        const nowAllowed = !wasAllowed;
+        const { nowAllowed, relativePath } = result;
 
+        // Синхронизируем с панелями
         if (nowAllowed) {
-            if (wasOriginallyAllowed) {
-                removeFromBlacklistByValue(relativePath);
-            } else {
-                addToAllowedlist(relativePath);
-            }
+            removeFromBlacklistByValue(relativePath);
+            // Если был в дефолтном blacklist — добавляем в allowedlist
         } else {
-            if (wasOriginallyAllowed) {
-                addToBlacklist(relativePath);
-            } else {
-                removeFromAllowedlistByValue(relativePath);
-            }
+            removeFromAllowedlistByValue(relativePath);
+            addToBlacklist(relativePath);
         }
     };
 
@@ -172,33 +161,21 @@ export const FileTree = ({
                     )}
                 </div>
                 <div className="flex items-center gap-1">
-                    <button
-                        onClick={zoomOut}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
-                        title="Уменьшить (или Scroll Down)"
-                    >
+                    <button onClick={zoomOut} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400" title="Уменьшить">
                         <ZoomOut className="w-4 h-4" />
                     </button>
                     <span className="text-xs text-gray-500 w-12 text-center font-mono">{Math.round(zoom * 100)}%</span>
-                    <button
-                        onClick={zoomIn}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
-                        title="Увеличить (или Scroll Up)"
-                    >
+                    <button onClick={zoomIn} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400" title="Увеличить">
                         <ZoomIn className="w-4 h-4" />
                     </button>
                     <div className="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-1" />
-                    <button
-                        onClick={resetZoom}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400"
-                        title="Сбросить zoom и позицию"
-                    >
+                    <button onClick={resetZoom} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-600 dark:text-gray-400" title="Сбросить">
                         <RotateCcw className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Canvas - привязываем ref */}
+            {/* Canvas */}
             <div
                 ref={containerRef}
                 className="tree-container flex-1 bg-gray-50 dark:bg-gray-950/50 relative min-h-[300px] overflow-hidden"
@@ -206,11 +183,7 @@ export const FileTree = ({
                 onMouseMove={onMouseMove}
                 onMouseUp={onMouseUp}
                 onMouseLeave={onMouseUp}
-                style={{
-                    cursor: fileTree
-                        ? (isDragging ? 'grabbing' : 'grab')
-                        : 'default'
-                }}
+                style={{ cursor: fileTree ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
             >
                 <div
                     className="tree-content p-4 min-w-max"
@@ -233,12 +206,11 @@ export const FileTree = ({
                             depth={0}
                             onToggle={handleToggle}
                             searchQuery={search}
-                            originalStatus={originalStatus}
+                            getNodeStatus={getNodeStatus}
                         />
                     )}
                 </div>
 
-                {/* Zoom Hint */}
                 {fileTree && (
                     <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1 opacity-60">
                         <MousePointer2 className="w-3 h-3" />
@@ -262,67 +234,58 @@ export const FileTree = ({
     );
 };
 
+// Мемоизированный компонент узла
 interface RecursiveNodeProps {
     node: TreeNode;
     depth: number;
-    onToggle: (path: string) => void;
+    onToggle: (path: string, node: TreeNode) => void;
     searchQuery: string;
-    originalStatus: Record<string, boolean>;
+    getNodeStatus: (node: TreeNode) => boolean;
 }
 
-const RecursiveNode = ({ node, depth, onToggle, searchQuery, originalStatus }: RecursiveNodeProps) => {
+const RecursiveNode = memo(({ node, depth, onToggle, searchQuery, getNodeStatus }: RecursiveNodeProps) => {
     const [expanded, setExpanded] = useState(node.expanded ?? (depth < 2));
     const indent = depth * 20;
     const isFolder = node.type === 'folder';
+    const isAllowed = getNodeStatus(node);
 
-    const matches = matchesSearch(node, searchQuery);
+    const matches = matchesSearch(node, searchQuery, getNodeStatus);
     const isHighlighted = searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const isOriginallyAllowed = originalStatus[node.path] !== false;
-    const isModified = node.allowed !== isOriginallyAllowed;
 
     const handleExpandClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (isFolder && node.allowed) {
+        if (isFolder && isAllowed) {
             setExpanded(!expanded);
         }
     };
 
     const handleRowClick = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('.expand-btn')) return;
-        onToggle(node.path);
+        onToggle(node.path, node);
     };
 
     return (
         <div>
             <div
-                className={`file-item flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-all select-none
-                    ${node.allowed
+                className={`file-item flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-all select-none ${isAllowed
                         ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
                         : 'hover:bg-red-50 dark:hover:bg-red-900/20'
-                    }
-                    ${isHighlighted
+                    } ${isHighlighted
                         ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-2 ring-yellow-400 dark:ring-yellow-600'
                         : ''
-                    }
-                    ${!matches && searchQuery ? 'opacity-30' : 'opacity-100'}
-                    ${isModified ? 'ring-1 ring-offset-1 ring-purple-400 dark:ring-purple-600' : ''}
-                `}
+                    } ${!matches && searchQuery ? 'opacity-30' : 'opacity-100'}`}
                 style={{ marginLeft: `${indent}px` }}
                 onClick={handleRowClick}
-                title={isModified ? 'Статус изменён вручную' : undefined}
             >
                 {isFolder ? (
                     <button
-                        className={`expand-btn p-0.5 rounded transition-colors ${node.allowed
-                            ? 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                            : 'cursor-not-allowed opacity-50'
+                        className={`expand-btn p-0.5 rounded transition-colors ${isAllowed ? 'hover:bg-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed opacity-50'
                             }`}
                         onClick={handleExpandClick}
-                        disabled={!node.allowed}
+                        disabled={!isAllowed}
                     >
                         <ChevronRight
-                            className={`w-4 h-4 text-gray-400 transition-transform ${expanded && node.allowed ? 'rotate-90' : ''}`}
+                            className={`w-4 h-4 text-gray-400 transition-transform ${expanded && isAllowed ? 'rotate-90' : ''}`}
                         />
                     </button>
                 ) : (
@@ -330,26 +293,24 @@ const RecursiveNode = ({ node, depth, onToggle, searchQuery, originalStatus }: R
                 )}
 
                 {isFolder ? (
-                    <FolderIcon allowed={node.allowed} />
+                    <FolderIcon allowed={isAllowed} />
                 ) : (
-                    <FileIcon name={node.name} allowed={node.allowed} />
+                    <FileIcon name={node.name} allowed={isAllowed} />
                 )}
 
-                <span
-                    className={`mono text-sm flex-1 ${node.allowed
+                <span className={`mono text-sm flex-1 ${isAllowed
                         ? 'text-gray-800 dark:text-gray-200'
                         : 'text-gray-400 dark:text-gray-500 line-through'
-                        }`}
-                >
+                    }`}>
                     {node.name}
                 </span>
 
-                <span className={`flex-shrink-0 ${node.allowed ? 'text-green-500' : 'text-red-500'}`}>
-                    {node.allowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                <span className={`flex-shrink-0 ${isAllowed ? 'text-green-500' : 'text-red-500'}`}>
+                    {isAllowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </span>
             </div>
 
-            {isFolder && expanded && node.allowed && node.children && (
+            {isFolder && expanded && isAllowed && node.children && (
                 <div>
                     {node.children.map(child => (
                         <RecursiveNode
@@ -358,11 +319,13 @@ const RecursiveNode = ({ node, depth, onToggle, searchQuery, originalStatus }: R
                             depth={depth + 1}
                             onToggle={onToggle}
                             searchQuery={searchQuery}
-                            originalStatus={originalStatus}
+                            getNodeStatus={getNodeStatus}
                         />
                     ))}
                 </div>
             )}
         </div>
     );
-};
+});
+
+RecursiveNode.displayName = 'RecursiveNode';

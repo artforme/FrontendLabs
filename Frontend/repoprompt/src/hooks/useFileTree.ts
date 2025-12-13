@@ -1,12 +1,19 @@
-// src/hooks/useFileTree.ts
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { parseZipToTree, type ParseProgress } from '../utils/zipParser';
-import { applyFilters, findNode, setNodeStatus } from '../utils/treeUtils';
+import { DEFAULT_BLACKLIST, matchesGlob, getRelativePath } from '../utils/treeUtils';
 import type { TreeNode } from '../types';
 
 export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
+    // Структура дерева - НЕ меняется после загрузки
     const [fileTree, setFileTree] = useState<TreeNode | null>(null);
-    const [originalStatus, setOriginalStatus] = useState<Record<string, boolean>>({});
+
+    // Только пути, которые пользователь ВРУЧНУЮ запретил (были разрешены → стали запрещены)
+    const [manuallyDisabled, setManuallyDisabled] = useState<Set<string>>(new Set());
+
+    // Только пути, которые пользователь ВРУЧНУЮ разрешил (были запрещены → стали разрешены)  
+    const [manuallyEnabled, setManuallyEnabled] = useState<Set<string>>(new Set());
+
+    // Loading state
     const [isLoading, setIsLoading] = useState(false);
     const [loadingPercent, setLoadingPercent] = useState(0);
     const [loadingStage, setLoadingStage] = useState<string>('');
@@ -22,25 +29,181 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     const [search, setSearch] = useState('');
 
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const fileTreeRef = useRef<TreeNode | null>(null);
-
-    useEffect(() => {
-        fileTreeRef.current = fileTree;
-    }, [fileTree]);
 
     const MIN_ZOOM = 0.25;
     const MAX_ZOOM = 3;
     const ZOOM_STEP = 0.1;
 
-    // Применяем фильтры при изменении blacklist/allowedlist
-    useEffect(() => {
-        if (fileTree) {
-            const treeCopy = JSON.parse(JSON.stringify(fileTree));
-            applyFilters(treeCopy, blacklist, allowedlist, originalStatus, false);
-            setFileTree(treeCopy);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    /**
+     * Проверяет, разрешён ли узел по умолчанию (без учёта ручных переопределений)
+     */
+    const isDefaultAllowed = useCallback((node: TreeNode): boolean => {
+        const relativePath = getRelativePath(node);
+        const name = node.name;
+
+        // Проверяем дефолтный blacklist
+        const isDefaultBlacklisted = DEFAULT_BLACKLIST.some(pattern =>
+            matchesGlob(relativePath, pattern) || name === pattern
+        );
+        if (isDefaultBlacklisted) return false;
+
+        // Проверяем пользовательский blacklist
+        const isUserBlacklisted = blacklist.some(pattern =>
+            matchesGlob(relativePath, pattern)
+        );
+        if (isUserBlacklisted) return false;
+
+        // Проверяем пользовательский allowedlist (перезаписывает blacklist)
+        const isUserAllowed = allowedlist.some(pattern =>
+            matchesGlob(relativePath, pattern)
+        );
+        if (isUserAllowed) return true;
+
+        // По умолчанию разрешён (если не в blacklist)
+        return !isDefaultBlacklisted && !isUserBlacklisted;
     }, [blacklist, allowedlist]);
+
+    /**
+     * Проверяет, запрещён ли какой-либо родитель
+     */
+    const isAnyParentDisabled = useCallback((path: string): boolean => {
+        const parts = path.split('/').filter(Boolean);
+        let currentPath = '';
+
+        for (let i = 0; i < parts.length - 1; i++) {
+            currentPath += '/' + parts[i];
+            if (manuallyDisabled.has(currentPath)) {
+                return true;
+            }
+        }
+        return false;
+    }, [manuallyDisabled]);
+
+    /**
+     * Получает финальный статус узла с учётом всех факторов
+     */
+    const getNodeStatus = useCallback((node: TreeNode): boolean => {
+        const path = node.path;
+
+        // Если родитель запрещён вручную — мы тоже запрещены
+        if (isAnyParentDisabled(path)) {
+            return false;
+        }
+
+        // Если вручную запрещён
+        if (manuallyDisabled.has(path)) {
+            return false;
+        }
+
+        // Если вручную разрешён
+        if (manuallyEnabled.has(path)) {
+            return true;
+        }
+
+        // Иначе — дефолтный статус
+        return isDefaultAllowed(node);
+    }, [manuallyDisabled, manuallyEnabled, isDefaultAllowed, isAnyParentDisabled]);
+
+    /**
+     * Переключает статус узла
+     */
+    const toggleNodeStatus = useCallback((path: string): {
+        nowAllowed: boolean;
+        relativePath: string;
+    } | null => {
+        if (!fileTree) return null;
+
+        // Находим узел для получения относительного пути
+        const findNode = (node: TreeNode): TreeNode | null => {
+            if (node.path === path) return node;
+            for (const child of node.children || []) {
+                const found = findNode(child);
+                if (found) return found;
+            }
+            return null;
+        };
+
+        const node = findNode(fileTree);
+        if (!node) return null;
+
+        const wasAllowed = getNodeStatus(node);
+        const nowAllowed = !wasAllowed;
+
+        const parts = path.split('/').filter(Boolean);
+        const relativePath = parts.length > 1 ? parts.slice(1).join('/') : node.name;
+
+        // Собираем все пути узла и его детей для рекурсивного toggle
+        const collectPaths = (n: TreeNode): string[] => {
+            const paths = [n.path];
+            n.children?.forEach(child => {
+                paths.push(...collectPaths(child));
+            });
+            return paths;
+        };
+
+        const allPaths = collectPaths(node);
+
+        if (nowAllowed) {
+            // Разрешаем: удаляем из disabled, добавляем в enabled
+            setManuallyDisabled(prev => {
+                const next = new Set(prev);
+                allPaths.forEach(p => next.delete(p));
+                return next;
+            });
+            // Добавляем только корневой путь в enabled (чтобы перезаписать дефолт)
+            if (!isDefaultAllowed(node)) {
+                setManuallyEnabled(prev => new Set(prev).add(path));
+            }
+        } else {
+            // Запрещаем: удаляем из enabled, добавляем в disabled
+            setManuallyEnabled(prev => {
+                const next = new Set(prev);
+                allPaths.forEach(p => next.delete(p));
+                return next;
+            });
+            setManuallyDisabled(prev => new Set(prev).add(path));
+        }
+
+        return { nowAllowed, relativePath };
+    }, [fileTree, getNodeStatus, isDefaultAllowed]);
+
+    /**
+     * Парсинг ZIP-архива
+     */
+    const parseZipFile = useCallback(async (file: File) => {
+        setIsLoading(true);
+        setLoadingPercent(0);
+        setLoadingStage('reading');
+        setCurrentFile('');
+
+        // Сбрасываем состояние
+        setZoom(1);
+        setPanX(0);
+        setPanY(0);
+        setManuallyDisabled(new Set());
+        setManuallyEnabled(new Set());
+
+        try {
+            const handleProgress = (progress: ParseProgress) => {
+                setLoadingPercent(progress.percent);
+                setLoadingStage(progress.stage);
+                if (progress.currentFile) {
+                    setCurrentFile(progress.currentFile);
+                }
+            };
+
+            const tree = await parseZipToTree(file, handleProgress);
+            setFileTree(tree);
+        } catch (error) {
+            console.error('Error parsing ZIP:', error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+            setLoadingPercent(0);
+            setLoadingStage('');
+            setCurrentFile('');
+        }
+    }, []);
 
     // Wheel listener для zoom
     useEffect(() => {
@@ -48,7 +211,7 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
-            if (!fileTreeRef.current) return;
+            if (!fileTree) return;
             e.preventDefault();
 
             const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
@@ -69,7 +232,7 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
 
         container.addEventListener('wheel', handleWheel, { passive: false });
         return () => container.removeEventListener('wheel', handleWheel);
-    }, []);
+    }, [fileTree]);
 
     const zoomIn = useCallback(() => {
         if (!fileTree) return;
@@ -106,87 +269,8 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         setIsDragging(false);
     }, []);
 
-    const toggleNodeStatus = useCallback((path: string): {
-        wasAllowed: boolean;
-        wasOriginallyAllowed: boolean;
-        relativePath: string;
-    } | null => {
-        if (!fileTree) return null;
-
-        const node = findNode(fileTree, path);
-        if (!node) return null;
-
-        const wasAllowed = node.allowed;
-        const wasOriginallyAllowed = originalStatus[path] !== false;
-        const newStatus = !wasAllowed;
-
-        const parts = path.split('/').filter(Boolean);
-        const relativePath = parts.length > 1 ? parts.slice(1).join('/') : node.name;
-
-        const treeCopy = JSON.parse(JSON.stringify(fileTree));
-        const nodeCopy = findNode(treeCopy, path);
-        if (nodeCopy) {
-            setNodeStatus(nodeCopy, newStatus);
-        }
-        setFileTree(treeCopy);
-
-        return { wasAllowed, wasOriginallyAllowed, relativePath };
-    }, [fileTree, originalStatus]);
-
-    /**
-     * Реальный парсинг ZIP-архива
-     */
-    const parseZipFile = useCallback(async (file: File) => {
-        setIsLoading(true);
-        setLoadingPercent(0);
-        setLoadingStage('reading');
-        setCurrentFile('');
-
-        // Сбрасываем zoom/pan
-        setZoom(1);
-        setPanX(0);
-        setPanY(0);
-
-        try {
-            const handleProgress = (progress: ParseProgress) => {
-                setLoadingPercent(progress.percent);
-                setLoadingStage(progress.stage);
-                if (progress.currentFile) {
-                    setCurrentFile(progress.currentFile);
-                }
-            };
-
-            const tree = await parseZipToTree(file, handleProgress);
-
-            // Сохраняем оригинальные статусы
-            const newOriginalStatus: Record<string, boolean> = {};
-            const collectStatus = (node: TreeNode) => {
-                newOriginalStatus[node.path] = node.allowed;
-                node.children?.forEach(collectStatus);
-            };
-            collectStatus(tree);
-
-            // Применяем пользовательские фильтры
-            applyFilters(tree, blacklist, allowedlist, newOriginalStatus, true);
-
-            setOriginalStatus(newOriginalStatus);
-            setFileTree(tree);
-        } catch (error) {
-            console.error('Error parsing ZIP:', error);
-            throw error;
-        } finally {
-            setIsLoading(false);
-            setLoadingPercent(0);
-            setLoadingStage('');
-            setCurrentFile('');
-        }
-    }, [blacklist, allowedlist]);
-
     return {
         fileTree,
-        originalFileTree: fileTree,
-        originalStatus,
-        setFileTree,
         isLoading,
         loadingPercent,
         loadingStage,
@@ -196,6 +280,7 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         onMouseDown, onMouseMove, onMouseUp,
         containerRef,
         toggleNodeStatus,
-        parseZipFile, // Новый метод вместо simulateFileUpload
+        parseZipFile,
+        getNodeStatus, // Новая функция для получения статуса
     };
 };

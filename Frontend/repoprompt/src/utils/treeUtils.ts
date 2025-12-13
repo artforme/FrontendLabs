@@ -521,18 +521,41 @@ export function collectFilesForCopy(node: TreeNode): string[] {
     return output;
 }
 
-// ============ LEGACY (для совместимости) ============
-
 /**
- * @deprecated Используйте collectFilesForDownload
+ * DFS-обход с внешней функцией проверки статуса
  */
-export function collectFilesLegacy(node: TreeNode, output: string[] = []): string[] {
-    if (node.type === 'file' && node.allowed && node.content) {
-        const relativePath = getRelativePath(node);
-        output.push(`├─ ${relativePath}\n${node.content}\n\n`);
+export function collectAllowedFilesDFSWithStatus(
+    node: TreeNode,
+    getNodeStatus: (node: TreeNode) => boolean,
+    output: string[] = []
+): string[] {
+    // Если узел запрещён — пропускаем
+    if (!getNodeStatus(node)) {
+        return output;
     }
-    if (node.children) {
-        node.children.forEach(child => collectFilesLegacy(child, output));
+
+    if (node.type === 'file') {
+        if (node.content) {
+            const relativePath = getRelativePath(node);
+            output.push(`\n${'─'.repeat(60)}\n`);
+            output.push(`📄 ${relativePath}\n`);
+            output.push(`${'─'.repeat(60)}\n`);
+            output.push(`${node.content}\n`);
+        }
+        return output;
     }
+
+    if (node.type === 'folder' && node.children) {
+        const sortedChildren = [...node.children].sort((a, b) => {
+            if (a.type === 'folder' && b.type === 'file') return -1;
+            if (a.type === 'file' && b.type === 'folder') return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        for (const child of sortedChildren) {
+            collectAllowedFilesDFSWithStatus(child, getNodeStatus, output);
+        }
+    }
+
     return output;
 }
