@@ -25,6 +25,7 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
             applyFilters(treeCopy, blacklist, allowedlist, originalStatus, false);
             setFileTree(treeCopy);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [blacklist, allowedlist]);
 
     const zoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
@@ -36,6 +37,8 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
     };
 
     const onMouseDown = (e: React.MouseEvent) => {
+        // Не начинаем drag если кликнули на элемент дерева
+        if ((e.target as HTMLElement).closest('.file-item')) return;
         setIsDragging(true);
         setStartX(e.clientX - panX);
         setStartY(e.clientY - panY);
@@ -55,11 +58,9 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         const node = findNode(fileTree, path);
         if (!node) return null;
 
-        // Возвращаем ТЕКУЩИЙ статус ДО изменения
         const wasAllowed = node.allowed;
         const newStatus = !wasAllowed;
 
-        // Создаём копию дерева и применяем изменения
         const treeCopy = JSON.parse(JSON.stringify(fileTree));
         const nodeCopy = findNode(treeCopy, path);
         if (nodeCopy) {
@@ -67,7 +68,7 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         }
         setFileTree(treeCopy);
 
-        return wasAllowed; // Возвращаем, был ли разрешён ДО клика
+        return wasAllowed;
     }, [fileTree]);
 
     const simulateFileUpload = useCallback(() => {
@@ -95,11 +96,8 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         }, 100);
     }, []);
 
-    // Фильтрация дерева для поиска
-    const filteredTree = fileTree ? filterTreeBySearch(fileTree, search) : null;
-
     return {
-        fileTree: filteredTree,
+        fileTree,           // Теперь возвращаем оригинальное дерево
         originalFileTree: fileTree,
         setFileTree,
         originalStatus,
@@ -112,23 +110,3 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         simulateFileUpload,
     };
 };
-
-function filterTreeBySearch(node: TreeNode, query: string): TreeNode | null {
-    if (!query) return node;
-    const nameMatch = node.name.toLowerCase().includes(query.toLowerCase());
-
-    if (node.type === 'file') {
-        return nameMatch ? node : null;
-    }
-
-    if (node.type === 'folder') {
-        const filteredChildren = node.children
-            ?.map(child => filterTreeBySearch(child, query))
-            .filter(Boolean) as TreeNode[];
-
-        if (nameMatch || (filteredChildren && filteredChildren.length > 0)) {
-            return { ...node, children: filteredChildren || [] };
-        }
-    }
-    return null;
-}

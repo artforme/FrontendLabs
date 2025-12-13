@@ -1,6 +1,59 @@
-import { useState, useEffect } from 'react';
-import mockHistory from '../assets/mockHistory.json';
+import { useState, useEffect, useCallback } from 'react';
 import type { HistoryProject } from '../types';
+
+// Мок-данные напрямую в хуке
+const MOCK_HISTORY: HistoryProject[] = [
+    {
+        id: 1,
+        name: "My React App",
+        date: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+        language: "TypeScript",
+        filesCount: 45,
+        allowedCount: 32,
+        tokensCount: 12000,
+        size: "2.5 MB"
+    },
+    {
+        id: 2,
+        name: "Backend API",
+        date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+        language: "JavaScript",
+        filesCount: 28,
+        allowedCount: 25,
+        tokensCount: 8500,
+        size: "1.8 MB"
+    },
+    {
+        id: 3,
+        name: "Data Analysis Script",
+        date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+        language: "Python",
+        filesCount: 15,
+        allowedCount: 12,
+        tokensCount: 4500,
+        size: "800 KB"
+    },
+    {
+        id: 4,
+        name: "Vue Dashboard",
+        date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+        language: "Vue",
+        filesCount: 52,
+        allowedCount: 40,
+        tokensCount: 15000,
+        size: "3.2 MB"
+    },
+    {
+        id: 5,
+        name: "Utility Library",
+        date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+        language: "TypeScript",
+        filesCount: 20,
+        allowedCount: 18,
+        tokensCount: 6000,
+        size: "1.2 MB"
+    }
+];
 
 export const useHistory = (
     simulateFileUpload: () => void,
@@ -10,56 +63,82 @@ export const useHistory = (
     const [selectedProject, setSelectedProject] = useState<HistoryProject | null>(null);
     const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
+    // Загружаем историю при монтировании
     useEffect(() => {
         const storedHistory = localStorage.getItem('history');
         if (storedHistory) {
-            setHistory(JSON.parse(storedHistory));
+            try {
+                const parsed = JSON.parse(storedHistory);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setHistory(parsed);
+                } else {
+                    setHistory(MOCK_HISTORY);
+                    localStorage.setItem('history', JSON.stringify(MOCK_HISTORY));
+                }
+            } catch {
+                setHistory(MOCK_HISTORY);
+                localStorage.setItem('history', JSON.stringify(MOCK_HISTORY));
+            }
         } else {
-            setHistory(mockHistory);
-            localStorage.setItem('history', JSON.stringify(mockHistory));
+            setHistory(MOCK_HISTORY);
+            localStorage.setItem('history', JSON.stringify(MOCK_HISTORY));
         }
     }, []);
 
+    // Сохраняем при изменении
     useEffect(() => {
-        localStorage.setItem('history', JSON.stringify(history));
+        if (history.length > 0) {
+            localStorage.setItem('history', JSON.stringify(history));
+        }
     }, [history]);
 
-    const deleteFromHistory = (id: number) => {
+    const deleteFromHistory = useCallback((id: number) => {
         const project = history.find(p => p.id === id);
         if (project) {
             setHistory(prev => prev.filter(p => p.id !== id));
             showToast(`Проект "${project.name}" удалён из истории`, 'info');
         }
-    };
+    }, [history, showToast]);
 
-    const clearHistory = () => {
+    const clearHistory = useCallback(() => {
         if (history.length > 0) {
             setHistory([]);
+            localStorage.removeItem('history');
             showToast('История очищена', 'info');
         }
-    };
+    }, [history.length, showToast]);
 
-    const previewStructure = (id: number) => {
+    const previewStructure = useCallback((id: number) => {
         const project = history.find(p => p.id === id);
         if (project) {
             setSelectedProject(project);
             setPreviewModalVisible(true);
         }
-    };
+    }, [history]);
 
-    const loadProjectFromHistory = () => {
+    const loadProjectFromHistory = useCallback(() => {
         if (selectedProject) {
             simulateFileUpload();
             showToast(`Проект "${selectedProject.name}" загружен`, 'success');
             setPreviewModalVisible(false);
         }
-    };
+    }, [selectedProject, simulateFileUpload, showToast]);
 
-    const downloadFromHistory = (id: number) => {
+    const downloadFromHistory = useCallback((id: number) => {
         const project = history.find(p => p.id === id);
         if (!project) return;
 
-        const output = `# ${project.name}\n# Downloaded from History\n# Files: ${project.filesCount}\n# Tokens: ~${project.tokensCount}\n...`;
+        const output = `# ${project.name}
+# Downloaded from History
+# Language: ${project.language}
+# Files: ${project.allowedCount}/${project.filesCount}
+# Tokens: ~${project.tokensCount}
+# Size: ${project.size}
+
+// This is a mock download from history
+// In real implementation, this would contain actual file contents
+`;
+
         const blob = new Blob([output], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -69,7 +148,13 @@ export const useHistory = (
         URL.revokeObjectURL(url);
 
         showToast(`Файл "${project.name}" скачан`, 'success');
-    };
+    }, [history, showToast]);
+
+    const resetToMocks = useCallback(() => {
+        setHistory(MOCK_HISTORY);
+        localStorage.setItem('history', JSON.stringify(MOCK_HISTORY));
+        showToast('История восстановлена', 'info');
+    }, [showToast]);
 
     return {
         history,
@@ -81,5 +166,6 @@ export const useHistory = (
         downloadFromHistory,
         deleteFromHistory,
         clearHistory,
+        resetToMocks,
     };
 };

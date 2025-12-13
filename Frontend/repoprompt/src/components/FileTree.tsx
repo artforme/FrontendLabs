@@ -26,7 +26,7 @@ interface FileTreeProps {
     addToAllowedlist: (item: string) => void;
 }
 
-// Иконка папки (заполненная, как в оригинале)
+// Иконка папки
 const FolderIcon = ({ allowed }: { allowed: boolean }) => (
     <svg
         className={`w-5 h-5 ${allowed ? 'text-yellow-400' : 'text-gray-500'}`}
@@ -62,12 +62,7 @@ const FileIcon = ({ name, allowed }: { name: string; allowed: boolean }) => {
     const color = allowed ? (colors[ext] || 'text-blue-400') : 'text-gray-500';
 
     return (
-        <svg
-            className={`w-5 h-5 ${color}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
+        <svg className={`w-5 h-5 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -76,6 +71,20 @@ const FileIcon = ({ name, allowed }: { name: string; allowed: boolean }) => {
             />
         </svg>
     );
+};
+
+// Проверка совпадения с поиском (рекурсивно для папок)
+const matchesSearch = (node: TreeNode, query: string): boolean => {
+    if (!query) return true;
+    const lowerQuery = query.toLowerCase();
+
+    if (node.name.toLowerCase().includes(lowerQuery)) return true;
+
+    if (node.type === 'folder' && node.children) {
+        return node.children.some(child => matchesSearch(child, lowerQuery));
+    }
+
+    return false;
 };
 
 export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTreeProps) => {
@@ -163,7 +172,12 @@ export const FileTree = ({ treeState, addToBlacklist, addToAllowedlist }: FileTr
                             <p className="text-sm">Загрузите ZIP-архив для просмотра структуры</p>
                         </div>
                     ) : (
-                        <RecursiveNode node={fileTree} depth={0} onToggle={handleToggle} />
+                        <RecursiveNode
+                            node={fileTree}
+                            depth={0}
+                            onToggle={handleToggle}
+                            searchQuery={search}
+                        />
                     )}
                 </div>
             </div>
@@ -187,12 +201,17 @@ interface RecursiveNodeProps {
     node: TreeNode;
     depth: number;
     onToggle: (path: string, node: TreeNode) => void;
+    searchQuery: string;
 }
 
-const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
+const RecursiveNode = ({ node, depth, onToggle, searchQuery }: RecursiveNodeProps) => {
     const [expanded, setExpanded] = useState(node.expanded ?? (depth < 2));
     const indent = depth * 20;
     const isFolder = node.type === 'folder';
+
+    // Проверяем совпадение с поиском
+    const matches = matchesSearch(node, searchQuery);
+    const isHighlighted = searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     const handleExpandClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -201,37 +220,50 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
         }
     };
 
-    const handleStatusClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    // Клик по строке (кроме стрелки) = toggle статуса
+    const handleRowClick = (e: React.MouseEvent) => {
+        // Если клик был на стрелке — не делаем toggle
+        if ((e.target as HTMLElement).closest('.expand-btn')) return;
         onToggle(node.path, node);
     };
 
     return (
         <div>
             <div
-                className={`file-item flex items-center gap-2 py-1 px-2 rounded-lg cursor-pointer transition-colors
+                className={`file-item flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-all select-none
                     ${node.allowed
-                        ? 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
-                        : 'opacity-50 hover:bg-red-50 dark:hover:bg-red-900/10'
-                    }`}
+                        ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        : 'hover:bg-red-50 dark:hover:bg-red-900/20'
+                    }
+                    ${isHighlighted
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-2 ring-yellow-400 dark:ring-yellow-600'
+                        : ''
+                    }
+                    ${!matches && searchQuery ? 'opacity-30' : 'opacity-100'}
+                `}
                 style={{ marginLeft: `${indent}px` }}
+                onClick={handleRowClick}
             >
-                {/* Expand Arrow */}
+                {/* Expand Arrow — только для папок */}
                 {isFolder ? (
                     <button
+                        className={`expand-btn p-0.5 rounded transition-colors ${node.allowed
+                                ? 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                                : 'cursor-not-allowed opacity-50'
+                            }`}
                         onClick={handleExpandClick}
-                        className={`p-0.5 rounded transition-colors ${node.allowed ? 'hover:bg-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed'}`}
                         disabled={!node.allowed}
                     >
                         <ChevronRight
-                            className={`w-4 h-4 text-gray-400 transition-transform ${expanded && node.allowed ? 'rotate-90' : ''}`}
+                            className={`w-4 h-4 text-gray-400 transition-transform ${expanded && node.allowed ? 'rotate-90' : ''
+                                }`}
                         />
                     </button>
                 ) : (
                     <span className="w-5" />
                 )}
 
-                {/* Icon — теперь кастомные SVG */}
+                {/* Icon */}
                 {isFolder ? (
                     <FolderIcon allowed={node.allowed} />
                 ) : (
@@ -241,24 +273,18 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
                 {/* Name */}
                 <span
                     className={`mono text-sm flex-1 ${node.allowed
-                        ? 'text-gray-800 dark:text-gray-200'
-                        : 'text-gray-400 dark:text-gray-500 line-through'
+                            ? 'text-gray-800 dark:text-gray-200'
+                            : 'text-gray-400 dark:text-gray-500 line-through'
                         }`}
-                    onClick={handleExpandClick}
                 >
                     {node.name}
                 </span>
 
-                {/* Status Toggle */}
-                <button
-                    onClick={handleStatusClick}
-                    className={`p-1 rounded transition-colors ${node.allowed
-                        ? 'hover:bg-green-100 dark:hover:bg-green-900/30 text-green-500'
-                        : 'hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
-                        }`}
-                >
+                {/* Status indicator */}
+                <span className={`flex-shrink-0 ${node.allowed ? 'text-green-500' : 'text-red-500'
+                    }`}>
                     {node.allowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                </button>
+                </span>
             </div>
 
             {/* Children */}
@@ -270,6 +296,7 @@ const RecursiveNode = ({ node, depth, onToggle }: RecursiveNodeProps) => {
                             node={child}
                             depth={depth + 1}
                             onToggle={onToggle}
+                            searchQuery={searchQuery}
                         />
                     ))}
                 </div>
