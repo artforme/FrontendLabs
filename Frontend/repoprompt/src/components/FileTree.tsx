@@ -252,16 +252,22 @@ interface RecursiveNodeProps {
 }
 
 const RecursiveNode = memo(({ node, depth, onToggle, searchQuery, getNodeStatus }: RecursiveNodeProps) => {
+    // Если папка запрещена, она всегда свернута (визуально), 
+    // но если пользователь её принудительно открыл ранее, мы это игнорируем при рендере детей
     const [expanded, setExpanded] = useState(node.expanded ?? (depth < 2));
     const indent = depth * 20;
     const isFolder = node.type === 'folder';
-    const isAllowed = node.allowed;
+    const isAllowed = node.allowed; // Статус берется из объекта (обработанного в applyFilters)
+
     const matches = matchesSearch(node, searchQuery, getNodeStatus);
     const isHighlighted = searchQuery && node.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     const handleExpandClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (isFolder) setExpanded(!expanded);
+        // === ИЗМЕНЕНИЕ: Раскрывать можно только РАЗРЕШЕННЫЕ папки ===
+        if (isFolder && isAllowed) {
+            setExpanded(!expanded);
+        }
     };
 
     const handleRowClick = (e: React.MouseEvent) => {
@@ -272,29 +278,57 @@ const RecursiveNode = memo(({ node, depth, onToggle, searchQuery, getNodeStatus 
     return (
         <div>
             <div
-                className={`file-item flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-all select-none ${isAllowed ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'hover:bg-red-50 dark:hover:bg-red-900/20'} ${isHighlighted ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-2 ring-yellow-400 dark:ring-yellow-600' : ''} ${!matches && searchQuery ? 'opacity-30' : 'opacity-100'}`}
+                className={`file-item flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-all select-none ${isAllowed
+                    ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                    : 'hover:bg-red-50 dark:hover:bg-red-900/20'
+                    } ${isHighlighted
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-2 ring-yellow-400 dark:ring-yellow-600'
+                        : ''
+                    } ${!matches && searchQuery ? 'opacity-30' : 'opacity-100'}`}
                 style={{ marginLeft: `${indent}px` }}
                 onClick={handleRowClick}
             >
                 {isFolder ? (
                     <button
-                        className="expand-btn p-0.5 rounded transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+                        // === ИЗМЕНЕНИЕ: Блокируем кнопку и меняем стиль ===
+                        disabled={!isAllowed}
+                        className={`expand-btn p-0.5 rounded transition-colors ${isAllowed
+                                ? 'hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer'
+                                : 'opacity-30 cursor-not-allowed'
+                            }`}
                         onClick={handleExpandClick}
                     >
-                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                        <ChevronRight
+                            className={`w-4 h-4 text-gray-400 transition-transform ${
+                                // Стрелка поворачивается только если разрешено и открыто
+                                expanded && isAllowed ? 'rotate-90' : ''
+                                }`}
+                        />
                     </button>
                 ) : (
                     <span className="w-5" />
                 )}
+
                 {isFolder ? <FolderIcon allowed={isAllowed} /> : <FileIcon name={node.name} allowed={isAllowed} />}
-                <span className={`mono text-sm flex-1 ${isAllowed ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500 line-through'}`}>
+
+                <span className={`mono text-sm flex-1 ${isAllowed
+                    ? 'text-gray-800 dark:text-gray-200'
+                    : 'text-gray-400 dark:text-gray-500 line-through'
+                    }`}>
                     {node.name}
                 </span>
+
                 <span className={`flex-shrink-0 ${isAllowed ? 'text-green-500' : 'text-red-500'}`}>
                     {isAllowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </span>
             </div>
-            {isFolder && expanded && node.children && (
+
+            {/* 
+               === ВАЖНОЕ ИЗМЕНЕНИЕ ===
+               Рендерим детей ТОЛЬКО если папка РАЗРЕШЕНА (isAllowed).
+               Даже если expanded === true, но isAllowed === false, дети скрываются.
+            */}
+            {isFolder && expanded && isAllowed && node.children && (
                 <div>
                     {node.children.map(child => (
                         <RecursiveNode

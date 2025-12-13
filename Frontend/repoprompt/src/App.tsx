@@ -24,7 +24,7 @@ import { useHistory } from './hooks/useHistory';
 import { useToast } from './hooks/useToast';
 
 // Utils
-import { calculateTreeStats } from './utils/treeUtils';
+import { calculateTreeStats, isParentBlocked } from './utils/treeUtils';
 
 function App() {
     const { toast, showToast, hideToast } = useToast();
@@ -99,6 +99,28 @@ function App() {
         }
     };
 
+    // === WRAPPERS ДЛЯ ВАЛИДАЦИИ ===
+    const handleAddToAllowedlist = (item: string) => {
+        // Проверяем, не заблокированы ли родители
+        if (isParentBlocked(treeState.fileTree, item)) {
+            showToast('Нельзя добавить: родительская папка заблокирована', 'error');
+            return;
+        }
+        panels.addToAllowedlist(item);
+    };
+
+    const handleAddToBlacklist = (item: string) => {
+        // Для черного списка проверка родителей не так критична (забанить забаненное не страшно),
+        // но для консистентности можно тоже запретить, если родитель уже в бане.
+        // Однако, часто хотят забанить конкретный файл внутри уже забаненной папки "на будущее".
+        // Но по вашей просьбе "запрети добавлять... если родитель заблокирован":
+        if (isParentBlocked(treeState.fileTree, item)) {
+            showToast('Родительская папка уже заблокирована', 'error');
+            return;
+        }
+        panels.addToBlacklist(item);
+    };
+
     return (
         <div className="min-h-screen transition-colors duration-300 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
             <Header
@@ -125,16 +147,15 @@ function App() {
                 <div className="grid grid-cols-[300px_1fr_300px] gap-4 h-[calc(100vh-280px)] min-h-[500px]">
                     <BlacklistPanel
                         blacklist={panels.blacklist}
-                        addToBlacklist={panels.addToBlacklist}
+                        addToBlacklist={handleAddToBlacklist}
                         removeFromBlacklist={panels.removeFromBlacklist}
                         openDefaultModal={() => setActiveModal('defaultBlacklist')}
                     />
 
-                     <FileTree
+                    <FileTree
                         treeState={treeState}
                         blacklist={panels.blacklist}
                         allowedlist={panels.allowedlist}
-                        // ==================
                         addToBlacklist={panels.addToBlacklist}
                         addToAllowedlist={panels.addToAllowedlist}
                         removeFromBlacklistByValue={panels.removeFromBlacklistByValue}
@@ -143,7 +164,7 @@ function App() {
 
                     <AllowedlistPanel
                         allowedlist={panels.allowedlist}
-                        addToAllowedlist={panels.addToAllowedlist}
+                        addToAllowedlist={handleAddToAllowedlist}
                         removeFromAllowedlist={panels.removeFromAllowedlist}
                     />
                 </div>
