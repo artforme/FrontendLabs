@@ -30,7 +30,6 @@ interface FileTreeProps {
     removeFromAllowedlistByValue: (item: string) => void;
 }
 
-// Иконка папки
 const FolderIcon = ({ allowed }: { allowed: boolean }) => (
     <svg
         className={`w-5 h-5 ${allowed ? 'text-yellow-400' : 'text-gray-500'}`}
@@ -41,7 +40,6 @@ const FolderIcon = ({ allowed }: { allowed: boolean }) => (
     </svg>
 );
 
-// Иконка файла с цветом по расширению
 const FileIcon = ({ name, allowed }: { name: string; allowed: boolean }) => {
     const ext = name.split('.').pop()?.toLowerCase() || '';
 
@@ -72,7 +70,6 @@ const FileIcon = ({ name, allowed }: { name: string; allowed: boolean }) => {
     );
 };
 
-// Проверка совпадения с поиском
 const matchesSearch = (node: TreeNode, query: string, getStatus: (n: TreeNode) => boolean): boolean => {
     if (!query) return true;
     const lowerQuery = query.toLowerCase();
@@ -120,7 +117,6 @@ export const FileTree = ({
         return { total, allowed, forbidden, tokens };
     }, [fileTree]);
 
-    // === ИСПРАВЛЕННАЯ ЛОГИКА ===
     const handleToggle = (node: TreeNode) => {
         const relativePath = getPath(node);
         // 1. Проверяем, запрещен ли файл по умолчанию (DEFAULT_BLACKLIST)
