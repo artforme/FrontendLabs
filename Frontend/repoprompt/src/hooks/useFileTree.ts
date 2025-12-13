@@ -137,14 +137,12 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
             setLoadingStage('');
             setCurrentFile('');
         }
-    }, [blacklist, allowedlist]); // Зависимости важны
+    }, [blacklist, allowedlist]);
 
-    // Helper для получения статуса (теперь просто читает свойство)
     const getNodeStatus = useCallback((node: TreeNode): boolean => {
         return node.allowed;
     }, []);
 
-    // Helper для получения относительного пути
     const getPath = useCallback((node: TreeNode): string => {
         return getRelativePath(node);
     }, []);
@@ -168,6 +166,6 @@ export const useFileTree = (blacklist: string[], allowedlist: string[]) => {
         contentRef,
         parseZipFile,
         getNodeStatus,
-        getPath, // Экспортируем helper
+        getPath,
     };
 };

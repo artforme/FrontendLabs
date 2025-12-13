@@ -10,7 +10,6 @@ export const useToast = () => {
 
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type });
-        // Автоскрытие через 3 секунды
         setTimeout(() => {
             setToast(null);
         }, 3000);
