@@ -11,6 +11,34 @@ export interface ParseProgress {
 export type ProgressCallback = (progress: ParseProgress) => void;
 
 /**
+ * Определяет общий корневой префикс для всех файлов в архиве
+ */
+function findCommonRoot(paths: string[]): string | null {
+    if (paths.length === 0) return null;
+
+    // Фильтруем служебные папки
+    const validPaths = paths.filter(p =>
+        p && !p.startsWith('__MACOSX') && !p.startsWith('.')
+    );
+
+    if (validPaths.length === 0) return null;
+
+    // Получаем первый сегмент каждого пути
+    const firstSegments = validPaths.map(p => p.split('/')[0]);
+
+    // Проверяем, все ли пути начинаются с одной папки
+    const firstSegment = firstSegments[0];
+    const allSameRoot = firstSegments.every(seg => seg === firstSegment);
+
+    // Если все файлы в одной корневой папке — возвращаем её
+    if (allSameRoot && firstSegment) {
+        return firstSegment;
+    }
+
+    return null;
+}
+
+/**
  * Парсит ZIP-архив и возвращает дерево файлов
  */
 export async function parseZipToTree(
@@ -26,14 +54,19 @@ export async function parseZipToTree(
     const zip = await JSZip.loadAsync(arrayBuffer);
     onProgress?.({ stage: 'extracting', percent: 30 });
 
-    // Собираем все файлы
-    const entries = Object.entries(zip.files);
-    const totalFiles = entries.length;
+    // Собираем все пути файлов
+    const allPaths = Object.keys(zip.files);
+
+    // Определяем общий корень
+    const commonRoot = findCommonRoot(allPaths);
+
+    // Определяем имя проекта
+    const projectName = commonRoot || file.name.replace('.zip', '');
 
     // Структура для построения дерева
     const root: TreeNode = {
-        name: file.name.replace('.zip', ''),
-        path: '/' + file.name.replace('.zip', ''),
+        name: projectName,
+        path: '/' + projectName,
         type: 'folder',
         allowed: true,
         expanded: true,
@@ -44,6 +77,8 @@ export async function parseZipToTree(
     const nodeMap = new Map<string, TreeNode>();
     nodeMap.set(root.path, root);
 
+    const entries = Object.entries(zip.files);
+    const totalFiles = entries.length;
     let processed = 0;
 
     for (const [relativePath, zipEntry] of entries) {
@@ -54,7 +89,25 @@ export async function parseZipToTree(
         }
 
         // Нормализуем путь
-        const cleanPath = relativePath.replace(/\/$/, ''); // убираем trailing slash
+        let cleanPath = relativePath.replace(/\/$/, '');
+        if (!cleanPath) {
+            processed++;
+            continue;
+        }
+
+        // ★ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: убираем общий корень из пути
+        // Если архив содержит my-project/src/App.tsx,
+        // и commonRoot = "my-project",
+        // то cleanPath станет "src/App.tsx"
+        if (commonRoot && cleanPath.startsWith(commonRoot + '/')) {
+            cleanPath = cleanPath.slice(commonRoot.length + 1);
+        } else if (commonRoot && cleanPath === commonRoot) {
+            // Это сама корневая папка — пропускаем, она уже создана как root
+            processed++;
+            continue;
+        }
+
+        // Пропускаем пустой путь после удаления корня
         if (!cleanPath) {
             processed++;
             continue;
@@ -69,6 +122,8 @@ export async function parseZipToTree(
 
         for (let i = 0; i < pathParts.length; i++) {
             const part = pathParts[i];
+            if (!part) continue; // Пропускаем пустые части
+
             const newPath = `${currentPath}/${part}`;
             const isLastPart = i === pathParts.length - 1;
             const isFolder = isDirectory || !isLastPart;
@@ -78,16 +133,23 @@ export async function parseZipToTree(
 
             if (!node) {
                 // Определяем, должен ли быть запрещён по умолчанию
-                const isDefaultBlacklisted = DEFAULT_BLACKLIST.some(
-                    pattern => part === pattern || part.startsWith(pattern + '/')
-                );
+                const isDefaultBlacklisted = DEFAULT_BLACKLIST.some(pattern => {
+                    // Проверяем точное совпадение имени
+                    if (part === pattern) return true;
+                    // Проверяем паттерны с расширениями (*.log)
+                    if (pattern.startsWith('*.')) {
+                        const ext = pattern.slice(1); // ".log"
+                        return part.endsWith(ext);
+                    }
+                    return false;
+                });
 
                 node = {
                     name: part,
                     path: newPath,
                     type: isFolder ? 'folder' : 'file',
                     allowed: !isDefaultBlacklisted,
-                    expanded: !isDefaultBlacklisted && i < 2, // Раскрываем первые 2 уровня
+                    expanded: !isDefaultBlacklisted && i < 2,
                     children: isFolder ? [] : undefined,
                     content: undefined
                 };
@@ -96,11 +158,15 @@ export async function parseZipToTree(
 
                 // Добавляем к родителю
                 if (parentNode.children) {
-                    parentNode.children.push(node);
+                    // Проверяем, что такого узла ещё нет
+                    const exists = parentNode.children.some(c => c.path === newPath);
+                    if (!exists) {
+                        parentNode.children.push(node);
+                    }
                 }
             }
 
-            // Если это файл (последняя часть пути и не директория), читаем содержимое
+            // Если это файл, читаем содержимое
             if (isLastPart && !isDirectory && node.allowed) {
                 try {
                     onProgress?.({
@@ -109,11 +175,9 @@ export async function parseZipToTree(
                         currentFile: cleanPath
                     });
 
-                    // Читаем содержимое файла как текст
                     const content = await zipEntry.async('string');
                     node.content = content;
                 } catch (e) {
-                    // Бинарный файл или ошибка чтения
                     node.content = `[Binary file or read error: ${part}]`;
                 }
             }
@@ -137,12 +201,10 @@ export async function parseZipToTree(
  * Рекурсивно сортирует узлы дерева
  */
 function sortTreeNodes(node: TreeNode): void {
-    if (node.children) {
+    if (node.children && node.children.length > 0) {
         node.children.sort((a, b) => {
-            // Папки сначала
             if (a.type === 'folder' && b.type === 'file') return -1;
             if (a.type === 'file' && b.type === 'folder') return 1;
-            // Алфавитно
             return a.name.localeCompare(b.name);
         });
 
@@ -187,18 +249,11 @@ export function isTextFile(filename: string): boolean {
         '.gitignore', '.gitattributes', '.dockerignore',
         '.editorconfig', '.prettierrc', '.eslintrc',
         '.babelrc', '.nvmrc',
-
-        // Без расширения но известные
-        'Dockerfile', 'Makefile', 'Rakefile', 'Gemfile',
-        'Procfile', 'Vagrantfile',
     ];
 
     const name = filename.toLowerCase();
-
-    // Проверяем полное имя файла (для файлов без расширения типа Dockerfile)
     if (textExtensions.includes(name)) return true;
 
-    // Проверяем расширение
     const ext = '.' + name.split('.').pop();
     return textExtensions.includes(ext);
 }
